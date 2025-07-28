@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLU BARCODE GENERATOR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/ods.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        .header h2 {
+            margin: 5px 0;
+            font-size: 10px;
+            color: #666;
+        }
+        .donation-info {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            width: 100%;
+            text-align: center;
+        }
+        .search-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        textarea {
+            font-family: monospace;
+            padding: 5px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            width: 100%;
+            max-width: 400px;
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            margin: 0 5px;
+        }
+        button:hover {
+            background-color: #e0e0e0;
+        }
+        select {
+            padding: 5px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            margin: 0 5px;
+            max-width: 300px;
+        }
+        
+        /* Slideshow Controls */
+        .slideshow-controls {
+            display: none;
+            margin: 15px 0;
+            text-align: center;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .slideshow-controls.active {
+            display: block;
+        }
+        .time-selector {
+            margin: 10px;
+        }
+        .time-selector label {
+            margin-right: 10px;
+        }
+        .slide-info {
+            margin: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        #result {
+            margin-top: 15px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .result-summary {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        /* Slideshow Container - IMPROVED ANIMATIONS */
+        .slideshow-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            overflow: hidden; /* Hide slides that are outside */
+            height: auto;
+            min-height: 400px; /* Minimum height to prevent jumping */
+        }
+        
+        .slides-wrapper {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+            width: 100%;
+        }
+        
+        .barcode-item {
+            border: 1px solid #ccc;
+            padding: 20px;
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            flex-shrink: 0; /* Prevent shrinking */
+            box-sizing: border-box;
+            /* Remove old display properties */
+        }
+        
+        /* Remove old animation classes - we'll use transform instead */
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+            width: 100px;
+            font-size: 16px;
+        }
+        td {
+            font-size: 18px;
+        }
+        .error {
+            color: red;
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .success {
+            color: green;
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .loading {
+            color: #666;
+            margin: 5px 0;
+            font-style: italic;
+            font-size: 16px;
+        }
+        .original-barcode {
+            color: #666;
+            font-size: 14px;
+            margin-top: 2px;
+            font-style: italic;
+        }
+        
+        /* Animation variants - can be selected */
+        .slides-wrapper.slide-left {
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .slides-wrapper.slide-right {
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .slides-wrapper.fade {
+            transition: opacity 0.5s ease-in-out;
+        }
+        
+        /* Alternative slide animations */
+        .animation-selector {
+            margin: 10px;
+        }
+
+        /* Data file selection styling */
+        .data-file-section {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        @media print {
+            .no-print {
+                display: none;
+            }
+            .slideshow-controls {
+                display: none !important;
+            }
+            .slideshow-container {
+                overflow: visible;
+            }
+            .slides-wrapper {
+                flex-direction: column;
+                transform: none !important;
+            }
+            .barcode-item {
+                display: block !important;
+                page-break-inside: avoid;
+                border: none;
+                margin-bottom: 20px;
+                width: 100% !important;
+            }
+            .result-summary {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PLU BARCODE GENERATOR</h1>
+            <h1>VERSI MOBILE APP</h1>
+            <h1>BY BDK234</h1>
+            <div class="donation-info">
+                Dibantu donate nya pak/bu untuk menghargai saya<br>
+                <br>
+		WARNING!!!!!! <br>
+		saya bisa memblok penggunaan ini kapan saja. jadi tolong hargai!!
+            </div>
+        </div>
+        
+        <div class="input-group no-print data-file-section">
+            <div><strong>📁 Data Excel (Auto Load):</strong></div>
+            <br>
+            <select id="dataFileSelect" onchange="loadSelectedDataFile()">
+                <option value="">-- Pilih file data --</option>
+            </select>
+            <br><br>
+            <button onclick="refreshDataFiles()">🔄 Refresh Data</button>
+            <button onclick="autoLoadFirstFile()">⚡ Auto Load Pertama</button>
+        </div>
+
+        <div class="input-group no-print">
+            <div>📤 Atau Upload File Excel Manual:</div>
+            <input type="file" id="fileInput" accept=".xlsx, .xls, .ods" />
+        </div>
+
+        <div class="input-group no-print">
+            <div>🔍 Input PLU (satu atau lebih):</div>
+            <div class="search-container">
+                <textarea id="searchInput" placeholder="Masukkan kode PLU...&#10;Satu PLU per baris"></textarea>
+            </div>
+            <div>
+                <button onclick="searchMultiplePLU()">Cari Semua</button>
+                <button onclick="clearResults()">Bersihkan Hasil</button>
+                <button onclick="window.print()">Cetak Semua</button>
+            </div>
+        </div>
+
+        <!-- Slideshow Controls -->
+        <div class="slideshow-controls no-print" id="slideshowControls">
+            <div class="slide-info" id="slideInfo">PLU 1 dari 1</div>
+            <div>
+                <button onclick="toggleSlideshow()" id="slideshowBtn">Mulai Slideshow</button>
+                <button onclick="prevSlide()">← Sebelumnya</button>
+                <button onclick="nextSlide()">Selanjutnya →</button>
+            </div>
+            <div class="time-selector">
+                <label>Waktu per slide:</label>
+                <select id="slideTime" onchange="updateSlideTime()">
+                    <option value="1000">1 detik</option>
+                    <option value="2000" selected>2 detik</option>
+                    <option value="3000">3 detik</option>
+                    <option value="4000">4 detik</option>
+                    <option value="5000">5 detik</option>
+                </select>
+            </div>
+            <div class="animation-selector">
+                <label>Animasi:</label>
+                <select id="animationType" onchange="updateAnimationType()">
+                    <option value="slide" selected>Slide (Geser)</option>
+                    <option value="fade">Fade (Memudar)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let excelData = [];
+        let slideshowInterval = null;
+        let currentSlide = 0;
+        let slides = [];
+        let slideTime = 2000; // default 2 detik
+        let isSlideshow = false;
+        let animationType = 'slide'; // default animation
+        let isAnimating = false; // prevent rapid clicking
+
+        // ====== DATA FILES CONFIGURATION ======
+        // Ganti dengan nama file Excel Anda yang sebenarnya
+        const embeddedDataFiles = {
+            'master_plu.xlsx': 'data/master_plu.xlsx',
+            'product_list.xlsx': 'data/product_list.xlsx',
+            'inventory_data.xlsx': 'data/inventory_data.xlsx',
+            'barcode_master.xlsx': 'data/barcode_master.xlsx',
+            'data1.xlsx': 'data/data1.xlsx',
+            'data2.xlsx': 'data/data2.xlsx'
+            'data2.ods': 'data/data2.ods'
+            // Tambahkan file Excel lainnya di sini sesuai kebutuhan
+        };
+
+        // ====== AUTO LOAD DATA FUNCTIONS ======
+        
+        // Function untuk load embedded data files
+        async function loadEmbeddedDataFile(fileName) {
+            try {
+                const response = await fetch(embeddedDataFiles[fileName]);
+                if (!response.ok) {
+                    throw new Error(`File tidak ditemukan: ${fileName}`);
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                return new Uint8Array(arrayBuffer);
+            } catch (error) {
+                console.error('Error loading embedded file:', error);
+                throw error;
+            }
+        }
+
+        // Function untuk populate dropdown dengan file data
+        function populateDataFileSelect() {
+            const select = document.getElementById('dataFileSelect');
+            select.innerHTML = '<option value="">-- Pilih file data --</option>';
+            
+            Object.keys(embeddedDataFiles).forEach(fileName => {
+                const option = document.createElement('option');
+                option.value = fileName;
+                // Buat nama yang lebih user-friendly
+                option.textContent = fileName.replace('.xlsx', '').replace('.xls', '').replace('.ods', '').toUpperCase();
+                select.appendChild(option);
+            });
+
+            if (Object.keys(embeddedDataFiles).length === 0) {
+                const option = document.createElement('option');
+                option.textContent = 'Tidak ada file data tersedia';
+                option.disabled = true;
+                select.appendChild(option);
+            }
+        }
+
+        // Function untuk load file yang dipilih dari dropdown
+        async function loadSelectedDataFile() {
+            const select = document.getElementById('dataFileSelect');
+            const fileName = select.value;
+            
+            if (!fileName) {
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loading">📊 Sedang memuat data file, harap tunggu...</div>';
+            
+            try {
+                const data = await loadEmbeddedDataFile(fileName);
+                const fileExtension = fileName.split('.').pop().toLowerCase();
+                let workbook;
+                
+                switch(fileExtension) {
+                    case 'ods':
+                        workbook = XLSX.read(data, {type: 'array', bookType: 'ods'});
+                        break;
+                    case 'xlsx':
+                    case 'xls':
+                    default:
+                        workbook = XLSX.read(data, {type: 'array'});
+                }
+                
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                excelData = XLSX.utils.sheet_to_json(worksheet);
+                
+                resultDiv.innerHTML = `
+                    <div class="result-summary success">
+                        ✅ File <strong>${fileName}</strong> berhasil dimuat!<br>
+                        📊 Total data: <strong>${excelData.length}</strong> item
+                    </div>
+                `;
+                
+                localStorage.setItem('excelData', JSON.stringify(excelData));
+                localStorage.setItem('currentDataFile', fileName);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-summary error">
+                        ❌ Gagal memuat file <strong>${fileName}</strong>!<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+                console.error(error);
+            }
+        }
+
+        // Function untuk refresh data files
+        function refreshDataFiles() {
+            populateDataFileSelect();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="success">🔄 Daftar file data berhasil di-refresh!</div>';
+            
+            // Auto-load last selected file if exists
+            const lastFile = localStorage.getItem('currentDataFile');
+            if (lastFile && embeddedDataFiles[lastFile]) {
+                document.getElementById('dataFileSelect').value = lastFile;
+                setTimeout(() => {
+                    loadSelectedDataFile();
+                }, 500);
+            }
+        }
+
+        // Function untuk auto load file pertama
+        function autoLoadFirstFile() {
+            const firstFile = Object.keys(embeddedDataFiles)[0];
+            if (firstFile) {
+                document.getElementById('dataFileSelect').value = firstFile;
+                loadSelectedDataFile();
+            } else {
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = '<div class="error">❌ Tidak ada file data yang tersedia untuk di-load!</div>';
+            }
+        }
+
+        // ====== ORIGINAL FUNCTIONS (UNCHANGED) ======
+
+        function cleanBarcode(barcode) {
+            return String(barcode).replace(/\D/g, '');
+        }
+
+        function getDescription(item) {
+            const descriptionKeys = [
+                'DESKRIPSI', 'Deskripsi', 'deskripsi', 
+                'DESCRIPTION', 'Description', 'description',
+                'KETERANGAN', 'Keterangan', 'keterangan', 
+                'NAMA', 'Nama', 'nama'
+            ];
+
+            for (let key of descriptionKeys) {
+                if (item[key]) {
+                    return item[key];
+                }
+            }
+
+            return '-';
+        }
+
+        function getBarcodeValues(item) {
+            const originalBarcode = item.BARCODE || item.Barcode || item.barcode || 
+                                  String(item.PLU || item.plu);
+            const cleanedBarcode = cleanBarcode(originalBarcode);
+            
+            return {
+                original: originalBarcode,
+                cleaned: cleanedBarcode || originalBarcode
+            };
+        }
+
+        // ====== FILE UPLOAD (MANUAL) ======
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="loading">📤 Sedang memuat file upload, harap tunggu...</div>';
+
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                let workbook;
+
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                try {
+                    switch(fileExtension) {
+                        case 'ods':
+                            workbook = XLSX.read(data, {type: 'array', bookType: 'ods'});
+                            break;
+                        case 'xlsx':
+                        case 'xls':
+                        default:
+                            workbook = XLSX.read(data, {type: 'array'});
+                    }
+
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    excelData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result-summary success">
+                            ✅ File <strong>${file.name}</strong> berhasil di-upload!<br>
+                            📊 Total data: <strong>${excelData.length}</strong> item
+                        </div>
+                    `;
+
+                    localStorage.setItem('excelData', JSON.stringify(excelData));
+                    localStorage.setItem('currentDataFile', 'manual_upload');
+                    
+                    // Reset dropdown selection
+                    document.getElementById('dataFileSelect').value = '';
+                } catch (error) {
+                    resultDiv.innerHTML = `
+                        <div class="result-summary error">
+                            ❌ Gagal memuat file upload!<br>
+                            Error: ${error.message}
+                        </div>
+                    `;
+                    console.error(error);
+                }
+            };
+
+            reader.onerror = function() {
+                resultDiv.innerHTML = '<div class="result-summary error">❌ Gagal memuat file upload!</div>';
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        // ====== WINDOW LOAD EVENT (MODIFIED) ======
+        window.addEventListener('load', function() {
+            // Populate data file dropdown
+            populateDataFileSelect();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loading">⏳ Memuat data dari penyimpanan...</div>';
+            
+            // Try to load from localStorage first
+            const savedData = localStorage.getItem('excelData');
+            const savedFile = localStorage.getItem('currentDataFile');
+            
+            if (savedData && savedFile) {
+                excelData = JSON.parse(savedData);
+                
+                if (savedFile !== 'manual_upload' && embeddedDataFiles[savedFile]) {
+                    document.getElementById('dataFileSelect').value = savedFile;
+                }
+                
+                const fileDisplayName = savedFile === 'manual_upload' ? 'File Upload Manual' : savedFile;
+                resultDiv.innerHTML = `
+                    <div class="result-summary success">
+                        ✅ Data <strong>${fileDisplayName}</strong> berhasil dimuat dari penyimpanan<br>
+                        📊 Total data: <strong>${excelData.length}</strong> item
+                    </div>
+                `;
+            } else {
+                // Auto-load first available data file
+                const firstFile = Object.keys(embeddedDataFiles)[0];
+                if (firstFile) {
+                    document.getElementById('dataFileSelect').value = firstFile;
+                    setTimeout(() => {
+                        loadSelectedDataFile();
+                    }, 1000);
+                } else {
+                    resultDiv.innerHTML = '<div class="loading">📁 Tidak ada file data tersedia. Silakan upload file Excel manual.</div>';
+                }
+            }
+        });
+
+        // ====== SEARCH AND DISPLAY FUNCTIONS (UNCHANGED) ======
+
+        function searchMultiplePLU() {
+            const searchText = document.getElementById('searchInput').value.trim();
+            const resultDiv = document.getElementById('result');
+
+            resultDiv.innerHTML = '<div class="loading">🔍 Sedang mencari data...</div>';
+
+            if (!excelData.length) {
+                resultDiv.innerHTML = '<div class="result-summary error">❌ Load data Excel terlebih dahulu!</div>';
+                return;
+            }
+
+            if (!searchText) {
+                resultDiv.innerHTML = '<div class="result-summary error">❌ Masukkan kode PLU!</div>';
+                return;
+            }
+
+            const searchValues = searchText.split('\n').filter(line => line.trim());
+            const results = [];
+            const notFound = [];
+
+            searchValues.forEach(searchValue => {
+                searchValue = searchValue.trim();
+                if (searchValue) {
+                    const foundItem = excelData.find(item => {
+                        return Object.values(item).some(value => 
+                            String(value).toLowerCase() === searchValue.toLowerCase()
+                        );
+                    });
+
+                    if (foundItem) {
+                        results.push(foundItem);
+                    } else {
+                        notFound.push(searchValue);
+                    }
+                }
+            });
+
+            displayResults(results, notFound);
+        }
+
+        function displayResults(results, notFound) {
+            const resultDiv = document.getElementById('result');
+            const slideshowControls = document.getElementById('slideshowControls');
+            
+            // Reset slideshow
+            stopSlideshow();
+            
+            let html = '';
+
+            // Hanya tampilkan result summary jika ada PLU yang tidak ditemukan
+            if (notFound.length > 0) {
+                html += '<div class="result-summary">';
+                html += `
+                    <div class="error">
+                        ❌ Tidak ditemukan (${notFound.length}): ${notFound.join(', ')}
+                    </div>
+                `;
+                html += '</div>';
+            }
+
+            if (results.length > 0) {
+                // Show slideshow controls if more than 1 result
+                if (results.length > 1) {
+                    slideshowControls.classList.add('active');
+                } else {
+                    slideshowControls.classList.remove('active');
+                }
+
+                html += '<div class="slideshow-container">';
+                html += '<div class="slides-wrapper" id="slidesWrapper">';
+                
+                results.forEach((item, index) => {
+                    const barcodeValues = getBarcodeValues(item);
+                    const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
+                    const description = getDescription(item);
+                    
+                    html += `
+                        <div class="barcode-item" data-slide="${index}">
+                            <table>
+                                <tr>
+                                    <th>PLU</th>
+                                    <td>${item.PLU || item.plu || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Barcode</th>
+                                    <td>
+                                        ${barcodeValues.cleaned}
+                                        ${showOriginal ? 
+                                            `<div class="original-barcode">(Original: ${barcodeValues.original})</div>` 
+                                            : ''}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Deskripsi</th>
+                                    <td>${description}</td>
+                                </tr>
+                            </table>
+                            <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+                
+                // Store slides data
+                slides = results;
+                currentSlide = 0;
+                updateSlideInfo();
+            } else if (notFound.length === 0) {
+                // Jika tidak ada hasil dan tidak ada yang tidak ditemukan
+                html += '<div class="result-summary error">❌ Tidak ada PLU yang dicari!</div>';
+                slideshowControls.classList.remove('active');
+            } else {
+                // Jika semua PLU tidak ditemukan
+                slideshowControls.classList.remove('active');
+            }
+
+            resultDiv.innerHTML = html;
+
+            // Generate barcodes
+            if (results.length > 0) {
+                results.forEach((item, index) => {
+                    const barcodeValues = getBarcodeValues(item);
+                    try {
+                        JsBarcode(`.barcode-${barcodeValues.cleaned}-${index}`, barcodeValues.cleaned, {
+                            format: "CODE128",
+                            width: 3,
+                            height: 180,
+                            displayValue: true
+                        });
+                    } catch (e) {
+                        console.error('Error generating barcode:', e);
+                    }
+                });
+                
+                // Initialize slide position
+                updateSlidePosition();
+            }
+        }
+
+        // ====== SLIDESHOW FUNCTIONS (UNCHANGED) ======
+
+        // New slide animation functions
+        function updateSlidePosition() {
+            const slidesWrapper = document.getElementById('slidesWrapper');
+            if (!slidesWrapper) return;
+            
+            if (animationType === 'slide') {
+                const translateX = -currentSlide * 100;
+                slidesWrapper.style.transform = `translateX(${translateX}%)`;
+                slidesWrapper.style.opacity = '1';
+            } else if (animationType === 'fade') {
+                // For fade animation, we'll handle it differently
+                const items = document.querySelectorAll('.barcode-item');
+                items.forEach((item, index) => {
+                    if (index === currentSlide) {
+                        item.style.display = 'block';
+                        item.style.opacity = '1';
+                    } else {
+                        item.style.display = 'none';
+                        item.style.opacity = '0';
+                    }
+                });
+                slidesWrapper.style.transform = 'translateX(0%)';
+            }
+        }
+
+        function updateAnimationType() {
+            animationType = document.getElementById('animationType').value;
+            const slidesWrapper = document.getElementById('slidesWrapper');
+            if (!slidesWrapper) return;
+            
+            // Reset all items to visible for slide animation
+            if (animationType === 'slide') {
+                const items = document.querySelectorAll('.barcode-item');
+                items.forEach(item => {
+                    item.style.display = 'block';
+                    item.style.opacity = '1';
+                });
+            }
+            
+            updateSlidePosition();
+        }
+
+        // Slideshow functions with improved animations
+        function toggleSlideshow() {
+            if (isSlideshow) {
+                stopSlideshow();
+            } else {
+                startSlideshow();
+            }
+        }
+
+        function startSlideshow() {
+            if (slides.length <= 1) return;
+            
+            isSlideshow = true;
+            document.getElementById('slideshowBtn').textContent = 'Stop Slideshow';
+            
+            slideshowInterval = setInterval(() => {
+                nextSlide();
+            }, slideTime);
+        }
+
+        function stopSlideshow() {
+            isSlideshow = false;
+            document.getElementById('slideshowBtn').textContent = 'Mulai Slideshow';
+            
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+            }
+        }
+
+        function nextSlide() {
+            if (slides.length <= 1 || isAnimating) return;
+            
+            isAnimating = true;
+            currentSlide = (currentSlide + 1) % slides.length;
+            updateSlidePosition();
+            updateSlideInfo();
+            
+            setTimeout(() => {
+                isAnimating = false;
+            }, 600); // Match animation duration
+        }
+
+        function prevSlide() {
+            if (slides.length <= 1 || isAnimating) return;
+            
+            isAnimating = true;
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            updateSlidePosition();
+            updateSlideInfo();
+            
+            setTimeout(() => {
+                isAnimating = false;
+            }, 600); // Match animation duration
+        }
+
+        function updateSlideInfo() {
+            const slideInfo = document.getElementById('slideInfo');
+            if (slideInfo && slides.length > 0) {
+                slideInfo.textContent = `Slide ${currentSlide + 1} dari ${slides.length}`;
+            }
+        }
+
+        function updateSlideTime() {
+            slideTime = parseInt(document.getElementById('slideTime').value);
+            if (isSlideshow) {
+                stopSlideshow();
+                startSlideshow();
+            }
+        }
+
+        function clearResults() {
+            stopSlideshow();
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('slideshowControls').classList.remove('active');
+            slides = [];
+            currentSlide = 0;
+            isAnimating = false;
+        }
+
+        document.getElementById('searchInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                searchMultiplePLU();
+            }
+        });
+    </script>
+</body>
+</html>
