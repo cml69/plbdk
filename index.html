@@ -188,6 +188,18 @@
             font-style: italic;
         }
         
+        .footer-signature {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            font-style: italic;
+            z-index: 1000;
+        }
+        
         /* Animation variants - can be selected */
         .slides-wrapper.slide-left {
             transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -228,6 +240,9 @@
                 width: 100% !important;
             }
             .result-summary {
+                display: none;
+            }
+            .footer-signature {
                 display: none;
             }
         }
@@ -287,6 +302,8 @@
         </div>
 
         <div id="result"></div>
+        
+        <div class="footer-signature">BDK234/2024</div>
     </div>
 
     <script>
@@ -478,7 +495,7 @@
                     try {
                         JsBarcode(`.barcode-${barcodeValues.cleaned}-${index}`, barcodeValues.cleaned, {
                             format: "CODE128",
-                            width: 2,
+                            width: 3,
                             height: 180,
                             displayValue: true
                         });
