@@ -72,6 +72,30 @@
             background-color: #e0e0e0;
         }
         
+        /* Data status indicator */
+        .data-status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .data-status.loading {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .data-status.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .data-status.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
         /* Slideshow Controls */
         .slideshow-controls {
             display: none;
@@ -254,6 +278,9 @@
             .footer-signature {
                 display: none;
             }
+            .data-status {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -271,15 +298,20 @@
             </div>
         </div>
 
+        <!-- Data Status Indicator -->
+        <div class="data-status loading no-print" id="dataStatus" style="display: none;">
+        </div>
+
         <div class="input-group no-print">
             <div>Input PLU (satu atau lebih):</div>
             <div class="search-container">
-                <textarea id="searchInput" placeholder="Masukkan kode PLU...&#10;Satu PLU per baris"></textarea>
+                <textarea id="searchInput" placeholder="Masukkan kode PLU...&#10;Satu PLU per baris" disabled></textarea>
             </div>
             <div>
-                <button onclick="searchMultiplePLU()">Cari Semua</button>
+                <button onclick="searchMultiplePLU()" id="searchBtn" disabled>Cari Semua</button>
                 <button onclick="clearResults()">Bersihkan Hasil</button>
                 <button onclick="window.print()">Cetak Semua</button>
+                <button onclick="loadExcelData()" id="reloadBtn">🔄 Reload Data</button>
             </div>
         </div>
 
@@ -357,25 +389,97 @@
             };
         }
 
-        window.addEventListener('load', function() {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '<div class="loading">Memuat data...</div>';
+        // Function to update data status
+        function updateDataStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('dataStatus');
+            statusDiv.className = `data-status ${type}`;
             
-            const savedData = localStorage.getItem('excelData');
-            if (savedData) {
-                excelData = JSON.parse(savedData);
-                resultDiv.innerHTML = `
-                    <div class="result-summary">
-                        Data berhasil dimuat. Total: ${excelData.length} item
-                    </div>
-                `;
+            const icons = {
+                loading: '🔄',
+                success: '✅',
+                error: '❌'
+            };
+            
+            statusDiv.innerHTML = `${icons[type]} ${message}`;
+        }
+
+        // Function to enable/disable input controls
+        function setInputEnabled(enabled) {
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+            
+            searchInput.disabled = !enabled;
+            searchBtn.disabled = !enabled;
+            
+            if (enabled) {
+                searchInput.placeholder = "Masukkan kode PLU...\nSatu PLU per baris";
             } else {
-                resultDiv.innerHTML = `
-                    <div class="result-summary error">
-                        Tidak ada data yang tersedia
-                    </div>
-                `;
+                searchInput.placeholder = "Menunggu data dimuat...";
             }
+        }
+
+        // Function to load Excel data automatically
+        async function loadExcelData() {
+            setInputEnabled(false);
+            
+            try {
+                const response = await fetch('data/data2.ods');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                
+                // Get the first worksheet
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Convert to JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                
+                if (jsonData.length === 0) {
+                    throw new Error('File kosong atau tidak ada data yang valid');
+                }
+                
+                excelData = jsonData;
+                
+                // Save to localStorage for backup
+                localStorage.setItem('excelData', JSON.stringify(excelData));
+                localStorage.setItem('dataLoadTime', new Date().toISOString());
+                
+                updateDataStatus(`Data berhasil dimuat! Total: ${excelData.length} item`, 'success');
+                document.getElementById('dataStatus').style.display = 'block';
+                setInputEnabled(true);
+                
+                // Focus on search input
+                document.getElementById('searchInput').focus();
+                
+            } catch (error) {
+                console.error('Error loading Excel data:', error);
+                
+                // Try to load from localStorage as fallback
+                const savedData = localStorage.getItem('excelData');
+                if (savedData) {
+                    excelData = JSON.parse(savedData);
+                    const loadTime = localStorage.getItem('dataLoadTime');
+                    const timeStr = loadTime ? new Date(loadTime).toLocaleString('id-ID') : 'Unknown';
+                    
+                    updateDataStatus(`⚠️ Menggunakan data backup (${excelData.length} item) - Dimuat: ${timeStr}`, 'error');
+                    document.getElementById('dataStatus').style.display = 'block';
+                    setInputEnabled(true);
+                } else {
+                    updateDataStatus(`❌ Gagal memuat data: ${error.message}`, 'error');
+                    document.getElementById('dataStatus').style.display = 'block';
+                    setInputEnabled(false);
+                }
+            }
+        }
+
+        // Auto-load data when page loads
+        window.addEventListener('load', function() {
+            loadExcelData();
         });
 
         function searchMultiplePLU() {
@@ -641,9 +745,18 @@
             isAnimating = false;
         }
 
+        // Keyboard shortcuts
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'Enter') {
                 searchMultiplePLU();
+            }
+        });
+
+        // Add keyboard shortcut for reload
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                loadExcelData();
             }
         });
     </script>
