@@ -1,0 +1,6 @@
+# Proteksi folder data - Block semua akses langsung
+Order Deny,Allow
+Deny from all
+
+# Custom error message
+ErrorDocument 403 "Access Denied - File Protected"
