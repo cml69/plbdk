@@ -1,8 +1,8 @@
 # Block akses ke folder data
-/data/* https://httpstat.us/403 403!
+#/data/* https://httpstat.us/403 403!
 
 # Atau redirect ke halaman lain
 # /data/* /404.html 404!
 
 # Block file tertentu saja
-# /data/data2.ods https://httpstat.us/403 403!
+/data/data2.ods https://httpstat.us/403 403!
