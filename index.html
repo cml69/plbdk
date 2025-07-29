@@ -6,6 +6,7 @@
     <title>PLU BARCODE GENERATOR</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/ods.js"></script>
     <style>
         body {
             font-family: monospace;
@@ -69,13 +70,6 @@
         }
         button:hover {
             background-color: #e0e0e0;
-        }
-        select {
-            padding: 5px 10px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            margin: 0 5px;
-            max-width: 300px;
         }
         
         /* Slideshow Controls */
@@ -147,7 +141,10 @@
             max-width: 600px;
             flex-shrink: 0; /* Prevent shrinking */
             box-sizing: border-box;
+            /* Remove old display properties */
         }
+        
+        /* Remove old animation classes - we'll use transform instead */
         
         table {
             width: 100%;
@@ -208,15 +205,6 @@
         .animation-selector {
             margin: 10px;
         }
-
-        /* Data file selection styling */
-        .data-file-section {
-            background-color: #f0f8ff;
-            padding: 15px;
-            border: 2px solid #4CAF50;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
         
         @media print {
             .no-print {
@@ -258,25 +246,9 @@
 		saya bisa memblok penggunaan ini kapan saja. jadi tolong hargai!!
             </div>
         </div>
-        
-        <div class="input-group no-print data-file-section">
-            <div><strong>📁 Data Excel (Auto Load):</strong></div>
-            <br>
-            <select id="dataFileSelect" onchange="loadSelectedDataFile()">
-                <option value="">-- Pilih file data --</option>
-            </select>
-            <br><br>
-            <button onclick="refreshDataFiles()">🔄 Refresh Data</button>
-            <button onclick="autoLoadFirstFile()">⚡ Auto Load Pertama</button>
-        </div>
 
         <div class="input-group no-print">
-            <div>📤 Atau Upload File Excel Manual:</div>
-            <input type="file" id="fileInput" accept=".xlsx, .xls, .ods" />
-        </div>
-
-        <div class="input-group no-print">
-            <div>🔍 Input PLU (satu atau lebih):</div>
+            <div>Input PLU (satu atau lebih):</div>
             <div class="search-container">
                 <textarea id="searchInput" placeholder="Masukkan kode PLU...&#10;Satu PLU per baris"></textarea>
             </div>
@@ -327,147 +299,6 @@
         let animationType = 'slide'; // default animation
         let isAnimating = false; // prevent rapid clicking
 
-        // ====== DATA FILES CONFIGURATION ======
-        // PERBAIKAN: Tambahkan koma yang hilang dan perbaiki path
-        const embeddedDataFiles = {
-            'data2.ods': 'data/data2.ods' // PERBAIKAN: Tambahkan koma yang hilang
-            // Tambahkan file Excel lainnya di sini sesuai kebutuhan
-        };
-
-        // ====== AUTO LOAD DATA FUNCTIONS ======
-        
-        // Function untuk load embedded data files
-        async function loadEmbeddedDataFile(fileName) {
-            try {
-                console.log(`Mencoba memuat file: ${embeddedDataFiles[fileName]}`);
-                const response = await fetch(embeddedDataFiles[fileName]);
-                console.log(`Response status: ${response.status}`);
-                
-                if (!response.ok) {
-                    throw new Error(`File tidak ditemukan: ${fileName} (Status: ${response.status})`);
-                }
-                const arrayBuffer = await response.arrayBuffer();
-                console.log(`File berhasil dimuat, ukuran: ${arrayBuffer.byteLength} bytes`);
-                return new Uint8Array(arrayBuffer);
-            } catch (error) {
-                console.error('Error loading embedded file:', error);
-                throw error;
-            }
-        }
-
-        // Function untuk populate dropdown dengan file data
-        function populateDataFileSelect() {
-            const select = document.getElementById('dataFileSelect');
-            select.innerHTML = '<option value="">-- Pilih file data --</option>';
-            
-            Object.keys(embeddedDataFiles).forEach(fileName => {
-                const option = document.createElement('option');
-                option.value = fileName;
-                // Buat nama yang lebih user-friendly
-                option.textContent = fileName.replace('.xlsx', '').replace('.xls', '').replace('.ods', '').toUpperCase();
-                select.appendChild(option);
-            });
-
-            if (Object.keys(embeddedDataFiles).length === 0) {
-                const option = document.createElement('option');
-                option.textContent = 'Tidak ada file data tersedia';
-                option.disabled = true;
-                select.appendChild(option);
-            }
-            
-            console.log(`Dropdown diisi dengan ${Object.keys(embeddedDataFiles).length} file`);
-        }
-
-        // Function untuk load file yang dipilih dari dropdown
-        async function loadSelectedDataFile() {
-            const select = document.getElementById('dataFileSelect');
-            const fileName = select.value;
-            
-            if (!fileName) {
-                return;
-            }
-            
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '<div class="loading">📊 Sedang memuat data file, harap tunggu...</div>';
-            
-            try {
-                const data = await loadEmbeddedDataFile(fileName);
-                const fileExtension = fileName.split('.').pop().toLowerCase();
-                let workbook;
-                
-                console.log(`Memproses file dengan ekstensi: ${fileExtension}`);
-                
-                switch(fileExtension) {
-                    case 'ods':
-                        workbook = XLSX.read(data, {type: 'array', bookType: 'ods'});
-                        break;
-                    case 'xlsx':
-                    case 'xls':
-                    default:
-                        workbook = XLSX.read(data, {type: 'array'});
-                }
-                
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                excelData = XLSX.utils.sheet_to_json(worksheet);
-                console.log(`Data berhasil diproses: ${excelData.length} item`);
-                
-                resultDiv.innerHTML = `
-                    <div class="result-summary success">
-                        ✅ File <strong>${fileName}</strong> berhasil dimuat!<br>
-                        📊 Total data: <strong>${excelData.length}</strong> item
-                    </div>
-                `;
-                
-                // Simpan ke localStorage
-                localStorage.setItem('excelData', JSON.stringify(excelData));
-                localStorage.setItem('currentDataFile', fileName);
-                
-            } catch (error) {
-                console.error('Error detail:', error);
-                resultDiv.innerHTML = `
-                    <div class="result-summary error">
-                        ❌ Gagal memuat file <strong>${fileName}</strong>!<br>
-                        Error: ${error.message}<br>
-                        <small>Periksa apakah file ada di folder data/ dan dapat diakses</small>
-                    </div>
-                `;
-            }
-        }
-
-        // Function untuk refresh data files
-        function refreshDataFiles() {
-            populateDataFileSelect();
-            
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '<div class="success">🔄 Daftar file data berhasil di-refresh!</div>';
-            
-            // Auto-load last selected file if exists
-            const lastFile = localStorage.getItem('currentDataFile');
-            if (lastFile && embeddedDataFiles[lastFile]) {
-                document.getElementById('dataFileSelect').value = lastFile;
-                setTimeout(() => {
-                    loadSelectedDataFile();
-                }, 500);
-            }
-        }
-
-        // Function untuk auto load file pertama
-        function autoLoadFirstFile() {
-            const firstFile = Object.keys(embeddedDataFiles)[0];
-            if (firstFile) {
-                console.log(`Auto loading file pertama: ${firstFile}`);
-                document.getElementById('dataFileSelect').value = firstFile;
-                loadSelectedDataFile();
-            } else {
-                const resultDiv = document.getElementById('result');
-                resultDiv.innerHTML = '<div class="error">❌ Tidak ada file data yang tersedia untuk di-load!</div>';
-            }
-        }
-
-        // ====== ORIGINAL FUNCTIONS (UNCHANGED) ======
-
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
         }
@@ -500,127 +331,40 @@
             };
         }
 
-        // ====== FILE UPLOAD (MANUAL) ======
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            const resultDiv = document.getElementById('result');
-            
-            resultDiv.innerHTML = '<div class="loading">📤 Sedang memuat file upload, harap tunggu...</div>';
-
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                let workbook;
-
-                const fileExtension = file.name.split('.').pop().toLowerCase();
-                
-                try {
-                    switch(fileExtension) {
-                        case 'ods':
-                            workbook = XLSX.read(data, {type: 'array', bookType: 'ods'});
-                            break;
-                        case 'xlsx':
-                        case 'xls':
-                        default:
-                            workbook = XLSX.read(data, {type: 'array'});
-                    }
-
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    excelData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    resultDiv.innerHTML = `
-                        <div class="result-summary success">
-                            ✅ File <strong>${file.name}</strong> berhasil di-upload!<br>
-                            📊 Total data: <strong>${excelData.length}</strong> item
-                        </div>
-                    `;
-
-                    localStorage.setItem('excelData', JSON.stringify(excelData));
-                    localStorage.setItem('currentDataFile', 'manual_upload');
-                    
-                    // Reset dropdown selection
-                    document.getElementById('dataFileSelect').value = '';
-                } catch (error) {
-                    resultDiv.innerHTML = `
-                        <div class="result-summary error">
-                            ❌ Gagal memuat file upload!<br>
-                            Error: ${error.message}
-                        </div>
-                    `;
-                    console.error(error);
-                }
-            };
-
-            reader.onerror = function() {
-                resultDiv.innerHTML = '<div class="result-summary error">❌ Gagal memuat file upload!</div>';
-            };
-
-            reader.readAsArrayBuffer(file);
-        });
-
-        // ====== WINDOW LOAD EVENT (MODIFIED) ======
         window.addEventListener('load', function() {
-            console.log('Aplikasi dimuat, memulai inisialisasi...');
-            
-            // Populate data file dropdown
-            populateDataFileSelect();
-            
             const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '<div class="loading">⏳ Memuat data dari penyimpanan...</div>';
+            resultDiv.innerHTML = '<div class="loading">Memuat data...</div>';
             
-            // Try to load from localStorage first
             const savedData = localStorage.getItem('excelData');
-            const savedFile = localStorage.getItem('currentDataFile');
-            
-            if (savedData && savedFile) {
-                console.log(`Data tersimpan ditemukan: ${savedFile}`);
+            if (savedData) {
                 excelData = JSON.parse(savedData);
-                
-                if (savedFile !== 'manual_upload' && embeddedDataFiles[savedFile]) {
-                    document.getElementById('dataFileSelect').value = savedFile;
-                }
-                
-                const fileDisplayName = savedFile === 'manual_upload' ? 'File Upload Manual' : savedFile;
                 resultDiv.innerHTML = `
-                    <div class="result-summary success">
-                        ✅ Data <strong>${fileDisplayName}</strong> berhasil dimuat dari penyimpanan<br>
-                        📊 Total data: <strong>${excelData.length}</strong> item
+                    <div class="result-summary">
+                        Data berhasil dimuat. Total: ${excelData.length} item
                     </div>
                 `;
             } else {
-                console.log('Tidak ada data tersimpan, mencoba auto-load file pertama...');
-                // Auto-load first available data file
-                const firstFile = Object.keys(embeddedDataFiles)[0];
-                if (firstFile) {
-                    console.log(`Mencoba auto-load: ${firstFile}`);
-                    document.getElementById('dataFileSelect').value = firstFile;
-                    setTimeout(() => {
-                        loadSelectedDataFile();
-                    }, 1000);
-                } else {
-                    console.log('Tidak ada file data yang dikonfigurasi');
-                    resultDiv.innerHTML = '<div class="loading">📁 Tidak ada file data tersedia. Silakan upload file Excel manual.</div>';
-                }
+                resultDiv.innerHTML = `
+                    <div class="result-summary error">
+                        Tidak ada data yang tersedia
+                    </div>
+                `;
             }
         });
-
-        // ====== SEARCH AND DISPLAY FUNCTIONS (UNCHANGED) ======
 
         function searchMultiplePLU() {
             const searchText = document.getElementById('searchInput').value.trim();
             const resultDiv = document.getElementById('result');
 
-            resultDiv.innerHTML = '<div class="loading">🔍 Sedang mencari data...</div>';
+            resultDiv.innerHTML = '<div class="loading">Sedang mencari data...</div>';
 
             if (!excelData.length) {
-                resultDiv.innerHTML = '<div class="result-summary error">❌ Load data Excel terlebih dahulu!</div>';
+                resultDiv.innerHTML = '<div class="result-summary error">Data belum tersedia!</div>';
                 return;
             }
 
             if (!searchText) {
-                resultDiv.innerHTML = '<div class="result-summary error">❌ Masukkan kode PLU!</div>';
+                resultDiv.innerHTML = '<div class="result-summary error">Masukkan kode PLU!</div>';
                 return;
             }
 
@@ -662,7 +406,7 @@
                 html += '<div class="result-summary">';
                 html += `
                     <div class="error">
-                        ❌ Tidak ditemukan (${notFound.length}): ${notFound.join(', ')}
+                        Tidak ditemukan (${notFound.length}): ${notFound.join(', ')}
                     </div>
                 `;
                 html += '</div>';
@@ -718,7 +462,7 @@
                 updateSlideInfo();
             } else if (notFound.length === 0) {
                 // Jika tidak ada hasil dan tidak ada yang tidak ditemukan
-                html += '<div class="result-summary error">❌ Tidak ada PLU yang dicari!</div>';
+                html += '<div class="result-summary error">Tidak ada PLU yang dicari!</div>';
                 slideshowControls.classList.remove('active');
             } else {
                 // Jika semua PLU tidak ditemukan
@@ -748,9 +492,7 @@
             }
         }
 
-        // ====== SLIDESHOW FUNCTIONS (UNCHANGED) ======
-
-        // New slide animation functions
+        // slide animation functions
         function updateSlidePosition() {
             const slidesWrapper = document.getElementById('slidesWrapper');
             if (!slidesWrapper) return;
@@ -832,19 +574,6 @@
             
             setTimeout(() => {
                 isAnimating = false;
-            }, 600); // Match animation duration
-        }
-
-        function prevSlide() {
-            if (slides.length <= 1 || isAnimating) return;
-            
-            isAnimating = true;
-            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
-            updateSlidePosition();
-            updateSlideInfo();
-            
-            setTimeout(() => {
-            isAnimating = false;
             }, 600); // Match animation duration
         }
 
