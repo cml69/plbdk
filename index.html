@@ -8,9 +8,45 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/ods.js"></script>
+    <style>
+        .product-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin: 0 auto 15px auto;
+            display: block;
+            border: 2px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .product-image.error {
+            display: none;
+        }
+        
+        .image-placeholder {
+            width: 80px;
+            height: 80px;
+            background: #f5f5f5;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px auto;
+            color: #999;
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .barcode-item {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
-    <!-- Menu will be loaded by menu.js -->
     <div id="menu-container"></div>
 
     <div class="container">
@@ -26,7 +62,6 @@
             </div>
         </div>
 
-        <!-- Data Status Indicator -->
         <div class="data-status loading no-print" id="dataStatus" style="display: none;">
         </div>
 
@@ -43,7 +78,6 @@
             </div>
         </div>
 
-        <!-- Slideshow Controls -->
         <div class="slideshow-controls no-print" id="slideshowControls">
             <div class="slide-info" id="slideInfo">PLU 1 dari 1</div>
             <div>
@@ -71,12 +105,10 @@
         </div>
 
         <div id="result"></div>
-        
-        
-    <!-- Footer will be loaded by footer.js -->
+    </div>
+    
     <div id="footer-container"></div>
 
-    <!-- Load External Scripts -->
     <script src="menu.js"></script>
     <script src="footer.js"></script>
 
@@ -85,10 +117,10 @@
         let slideshowInterval = null;
         let currentSlide = 0;
         let slides = [];
-        let slideTime = 2000; // default 2 detik
+        let slideTime = 2000;
         let isSlideshow = false;
-        let animationType = 'slide'; // default animation
-        let isAnimating = false; // prevent rapid clicking
+        let animationType = 'slide';
+        let isAnimating = false;
 
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
@@ -122,7 +154,41 @@
             };
         }
 
-        // Function to update data status
+        function getProductImageUrl(plu) {
+            return `https://assets.klikindomaret.com/products/${plu}/${plu}_thumb.jpg`;
+        }
+
+        function createProductImage(plu, index) {
+            const imageUrl = getProductImageUrl(plu);
+            return `
+                <img src="${imageUrl}" 
+                     class="product-image" 
+                     id="product-img-${index}"
+                     onerror="handleImageError(this, ${index})"
+                     onload="handleImageLoad(this)"
+                     alt="Produk ${plu}">
+                <div class="image-placeholder" id="placeholder-${index}" style="display: none;">
+                    Gambar tidak tersedia
+                </div>
+            `;
+        }
+
+        function handleImageError(img, index) {
+            img.style.display = 'none';
+            const placeholder = document.getElementById(`placeholder-${index}`);
+            if (placeholder) {
+                placeholder.style.display = 'flex';
+            }
+        }
+
+        function handleImageLoad(img) {
+            img.style.opacity = '0';
+            img.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+                img.style.opacity = '1';
+            }, 100);
+        }
+
         function updateDataStatus(message, type = 'loading') {
             const statusDiv = document.getElementById('dataStatus');
             statusDiv.className = `data-status ${type}`;
@@ -136,7 +202,6 @@
             statusDiv.innerHTML = `${icons[type]} ${message}`;
         }
 
-        // Function to enable/disable input controls
         function setInputEnabled(enabled) {
             const searchInput = document.getElementById('searchInput');
             const searchBtn = document.getElementById('searchBtn');
@@ -151,7 +216,6 @@
             }
         }
 
-        // Function to load Excel data automatically
         async function loadExcelData() {
             setInputEnabled(false);
             
@@ -165,11 +229,9 @@
                 const arrayBuffer = await response.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 
-                // Get the first worksheet
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Convert to JSON
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
                 
                 if (jsonData.length === 0) {
@@ -178,7 +240,6 @@
                 
                 excelData = jsonData;
                 
-                // Save to localStorage for backup
                 localStorage.setItem('excelData', JSON.stringify(excelData));
                 localStorage.setItem('dataLoadTime', new Date().toISOString());
                 
@@ -186,13 +247,11 @@
                 document.getElementById('dataStatus').style.display = 'block';
                 setInputEnabled(true);
                 
-                // Focus on search input
                 document.getElementById('searchInput').focus();
                 
             } catch (error) {
                 console.error('Error loading Excel data:', error);
                 
-                // Try to load from localStorage as fallback
                 const savedData = localStorage.getItem('excelData');
                 if (savedData) {
                     excelData = JSON.parse(savedData);
@@ -210,7 +269,6 @@
             }
         }
 
-        // Auto-load data when page loads
         window.addEventListener('load', function() {
             loadExcelData();
         });
@@ -259,7 +317,6 @@
             const resultDiv = document.getElementById('result');
             const slideshowControls = document.getElementById('slideshowControls');
             
-            // Reset slideshow
             stopSlideshow();
             
             let html = '';
@@ -275,7 +332,6 @@
             }
 
             if (results.length > 0) {
-                // Show slideshow controls if more than 1 result
                 if (results.length > 1) {
                     slideshowControls.classList.add('active');
                 } else {
@@ -289,13 +345,15 @@
                     const barcodeValues = getBarcodeValues(item);
                     const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
                     const description = getDescription(item);
+                    const plu = item.PLU || item.plu;
                     
                     html += `
                         <div class="barcode-item" data-slide="${index}">
+                            ${createProductImage(plu, index)}
                             <table>
                                 <tr>
                                     <th>PLU</th>
-                                    <td>${item.PLU || item.plu || '-'}</td>
+                                    <td>${plu || '-'}</td>
                                 </tr>
                                 <tr>
                                     <th>Barcode</th>
@@ -318,7 +376,6 @@
                 
                 html += '</div></div>';
                 
-                // Store slides data
                 slides = results;
                 currentSlide = 0;
                 updateSlideInfo();
@@ -331,7 +388,6 @@
 
             resultDiv.innerHTML = html;
 
-            // Generate barcodes
             if (results.length > 0) {
                 results.forEach((item, index) => {
                     const barcodeValues = getBarcodeValues(item);
@@ -347,12 +403,10 @@
                     }
                 });
                 
-                // Initialize slide position
                 updateSlidePosition();
             }
         }
 
-        // slide animation functions
         function updateSlidePosition() {
             const slidesWrapper = document.getElementById('slidesWrapper');
             if (!slidesWrapper) return;
@@ -472,14 +526,12 @@
             isAnimating = false;
         }
 
-        // Keyboard shortcuts
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'Enter') {
                 searchMultiplePLU();
             }
         });
 
-        // Add keyboard shortcut for reload
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'r') {
                 e.preventDefault();
@@ -487,7 +539,6 @@
             }
         });
 
-        // Wait for menu to load before setting active state
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 const menuItems = document.querySelectorAll('.menu-item');
