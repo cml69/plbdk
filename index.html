@@ -4,46 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PLU BARCODE GENERATOR</title>
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/ods.js"></script>
-    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-None>by BDK234</p>
-        </div>
-        
-        <nav>
-            <a href="#">
-                <div>🏠</div>
-                PLU Barcode Generator
-            </a>
-            <a href="barcodekarton.html">
-                <div>📦</div>
-                Barcode Karton
-            </a>
-            <a href="#">
-                <div>📊</div>
-                Custom Barcode
-                (COMING SOON)
-            </a>
-        </nav>
-        
-        <div>
-            © 2024 BDK234<br>
-            Version 1.0
-        </div>
-    </div>
+    <!-- Menu will be loaded by menu.js -->
+    <div id="menu-container"></div>
 
-    <!-- Menu Overlay -->
-    <div id="menuOverlay" onclick="closeMenu()"></div>
-
-    <div>
-        <div>
+    <div class="container">
+        <div class="header">
             <h1>PLU BARCODE GENERATOR</h1>
             <h1>VERSI STAND ALONE</h1>
             <h1>BY BDK234</h1>
-            <div>
+            <div class="donation-info">
                 Dibantu donate nya pak/bu untuk menghargai saya<br>
                 <br>
                 WARNING!!!!!! <br>
@@ -52,12 +27,12 @@ None>by BDK234</p>
         </div>
 
         <!-- Data Status Indicator -->
-        <div id="dataStatus" style="display: none;">
+        <div class="data-status loading no-print" id="dataStatus" style="display: none;">
         </div>
 
-        <div>
+        <div class="input-group no-print">
             <div>Input PLU (satu atau lebih):</div>
-            <div>
+            <div class="search-container">
                 <textarea id="searchInput" placeholder="Masukkan kode PLU...&#10;Satu PLU per baris" disabled></textarea>
             </div>
             <div>
@@ -69,14 +44,14 @@ None>by BDK234</p>
         </div>
 
         <!-- Slideshow Controls -->
-        <div id="slideshowControls">
-            <div id="slideInfo">PLU 1 dari 1</div>
+        <div class="slideshow-controls no-print" id="slideshowControls">
+            <div class="slide-info" id="slideInfo">PLU 1 dari 1</div>
             <div>
                 <button onclick="toggleSlideshow()" id="slideshowBtn">Mulai Slideshow</button>
                 <button onclick="prevSlide()">← Sebelumnya</button>
                 <button onclick="nextSlide()">Selanjutnya →</button>
             </div>
-            <div>
+            <div class="time-selector">
                 <label>Waktu per slide:</label>
                 <select id="slideTime" onchange="updateSlideTime()">
                     <option value="1000">1 detik</option>
@@ -86,7 +61,7 @@ None>by BDK234</p>
                     <option value="5000">5 detik</option>
                 </select>
             </div>
-            <div>
+            <div class="animation-selector">
                 <label>Animasi:</label>
                 <select id="animationType" onchange="updateAnimationType()">
                     <option value="slide" selected>Slide (Geser)</option>
@@ -97,7 +72,7 @@ None>by BDK234</p>
 
         <div id="result"></div>
         
-        <div>BDK234/2024</div>
+        <div class="footer-signature">BDK234/2024</div>
     </div>
 
     <!-- Footer will be loaded by footer.js -->
@@ -116,48 +91,6 @@ None>by BDK234</p>
         let isSlideshow = false;
         let animationType = 'slide'; // default animation
         let isAnimating = false; // prevent rapid clicking
-
-        // Menu functions
-        function toggleMenu() {
-            const menu = document.getElementById('slideMenu');
-            const overlay = document.getElementById('menuOverlay');
-            
-            if (menu.style.display === 'block') {
-                closeMenu();
-            } else {
-                openMenu();
-            }
-        }
-
-        function openMenu() {
-            const menu = document.getElementById('slideMenu');
-            const overlay = document.getElementById('menuOverlay');
-            
-            menu.style.display = 'block';
-            overlay.style.display = 'block';
-        }
-
-        function closeMenu() {
-            const menu = document.getElementById('slideMenu');
-            const overlay = document.getElementById('menuOverlay');
-            
-            menu.style.display = 'none';
-            overlay.style.display = 'none';
-        }
-
-        // Close menu when clicking on menu links
-        document.querySelectorAll('nav a').forEach(item => {
-            item.addEventListener('click', function(e) {
-                closeMenu();
-            });
-        });
-
-        // Close menu on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeMenu();
-            }
-        });
 
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
@@ -194,6 +127,7 @@ None>by BDK234</p>
         // Function to update data status
         function updateDataStatus(message, type = 'loading') {
             const statusDiv = document.getElementById('dataStatus');
+            statusDiv.className = `data-status ${type}`;
             
             const icons = {
                 loading: '🔄',
@@ -246,6 +180,10 @@ None>by BDK234</p>
                 
                 excelData = jsonData;
                 
+                // Save to localStorage for backup
+                localStorage.setItem('excelData', JSON.stringify(excelData));
+                localStorage.setItem('dataLoadTime', new Date().toISOString());
+                
                 updateDataStatus(`Data berhasil dimuat! Total: ${excelData.length} item`, 'success');
                 document.getElementById('dataStatus').style.display = 'block';
                 setInputEnabled(true);
@@ -255,9 +193,22 @@ None>by BDK234</p>
                 
             } catch (error) {
                 console.error('Error loading Excel data:', error);
-                updateDataStatus(`❌ Gagal memuat data: ${error.message}`, 'error');
-                document.getElementById('dataStatus').style.display = 'block';
-                setInputEnabled(false);
+                
+                // Try to load from localStorage as fallback
+                const savedData = localStorage.getItem('excelData');
+                if (savedData) {
+                    excelData = JSON.parse(savedData);
+                    const loadTime = localStorage.getItem('dataLoadTime');
+                    const timeStr = loadTime ? new Date(loadTime).toLocaleString('id-ID') : 'Unknown';
+                    
+                    updateDataStatus(`⚠️ Menggunakan data backup (${excelData.length} item) - Dimuat: ${timeStr}`, 'error');
+                    document.getElementById('dataStatus').style.display = 'block';
+                    setInputEnabled(true);
+                } else {
+                    updateDataStatus(`❌ Gagal memuat data: ${error.message}`, 'error');
+                    document.getElementById('dataStatus').style.display = 'block';
+                    setInputEnabled(false);
+                }
             }
         }
 
@@ -270,15 +221,15 @@ None>by BDK234</p>
             const searchText = document.getElementById('searchInput').value.trim();
             const resultDiv = document.getElementById('result');
 
-            resultDiv.innerHTML = '<div>Sedang mencari data...</div>';
+            resultDiv.innerHTML = '<div class="loading">Sedang mencari data...</div>';
 
             if (!excelData.length) {
-                resultDiv.innerHTML = '<div>Data belum tersedia!</div>';
+                resultDiv.innerHTML = '<div class="result-summary error">Data belum tersedia!</div>';
                 return;
             }
 
             if (!searchText) {
-                resultDiv.innerHTML = '<div>Masukkan kode PLU!</div>';
+                resultDiv.innerHTML = '<div class="result-summary error">Masukkan kode PLU!</div>';
                 return;
             }
 
@@ -315,11 +266,10 @@ None>by BDK234</p>
             
             let html = '';
 
-            // Hanya tampilkan result summary jika ada PLU yang tidak ditemukan
             if (notFound.length > 0) {
-                html += '<div>';
+                html += '<div class="result-summary">';
                 html += `
-                    <div style="color: red;">
+                    <div class="error">
                         Tidak ditemukan (${notFound.length}): ${notFound.join(', ')}
                     </div>
                 `;
@@ -329,13 +279,13 @@ None>by BDK234</p>
             if (results.length > 0) {
                 // Show slideshow controls if more than 1 result
                 if (results.length > 1) {
-                    slideshowControls.style.display = 'block';
+                    slideshowControls.classList.add('active');
                 } else {
-                    slideshowControls.style.display = 'none';
+                    slideshowControls.classList.remove('active');
                 }
 
-                html += '<div>';
-                html += '<div id="slidesWrapper">';
+                html += '<div class="slideshow-container">';
+                html += '<div class="slides-wrapper" id="slidesWrapper">';
                 
                 results.forEach((item, index) => {
                     const barcodeValues = getBarcodeValues(item);
@@ -343,24 +293,24 @@ None>by BDK234</p>
                     const description = getDescription(item);
                     
                     html += `
-                        <div data-slide="${index}" style="border: 1px solid #ccc; padding: 20px; margin: 10px 0; text-align: center;">
-                            <table style="width: 100%; border-collapse: collapse;">
+                        <div class="barcode-item" data-slide="${index}">
+                            <table>
                                 <tr>
-                                    <th style="border: 1px solid #ccc; padding: 8px; background: #f0f0f0; width: 100px;">PLU</th>
-                                    <td style="border: 1px solid #ccc; padding: 8px;">${item.PLU || item.plu || '-'}</td>
+                                    <th>PLU</th>
+                                    <td>${item.PLU || item.plu || '-'}</td>
                                 </tr>
                                 <tr>
-                                    <th style="border: 1px solid #ccc; padding: 8px; background: #f0f0f0;">Barcode</th>
-                                    <td style="border: 1px solid #ccc; padding: 8px;">
+                                    <th>Barcode</th>
+                                    <td>
                                         ${barcodeValues.cleaned}
                                         ${showOriginal ? 
-                                            `<div style="color: #666; font-size: 14px; margin-top: 2px; font-style: italic;">(Original: ${barcodeValues.original})</div>` 
+                                            `<div class="original-barcode">(Original: ${barcodeValues.original})</div>` 
                                             : ''}
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th style="border: 1px solid #ccc; padding: 8px; background: #f0f0f0;">Deskripsi</th>
-                                    <td style="border: 1px solid #ccc; padding: 8px;">${description}</td>
+                                    <th>Deskripsi</th>
+                                    <td>${description}</td>
                                 </tr>
                             </table>
                             <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
@@ -375,12 +325,10 @@ None>by BDK234</p>
                 currentSlide = 0;
                 updateSlideInfo();
             } else if (notFound.length === 0) {
-                // Jika tidak ada hasil dan tidak ada yang tidak ditemukan
-                html += '<div>Tidak ada PLU yang dicari!</div>';
-                slideshowControls.style.display = 'none';
+                html += '<div class="result-summary error">Tidak ada PLU yang dicari!</div>';
+                slideshowControls.classList.remove('active');
             } else {
-                // Jika semua PLU tidak ditemukan
-                slideshowControls.style.display = 'none';
+                slideshowControls.classList.remove('active');
             }
 
             resultDiv.innerHTML = html;
@@ -411,35 +359,41 @@ None>by BDK234</p>
             const slidesWrapper = document.getElementById('slidesWrapper');
             if (!slidesWrapper) return;
             
-            const items = slidesWrapper.querySelectorAll('[data-slide]');
-            
-            if (animationType === 'fade') {
-                // For fade animation
+            if (animationType === 'slide') {
+                const translateX = -currentSlide * 100;
+                slidesWrapper.style.transform = `translateX(${translateX}%)`;
+                slidesWrapper.style.opacity = '1';
+            } else if (animationType === 'fade') {
+                const items = document.querySelectorAll('.barcode-item');
                 items.forEach((item, index) => {
                     if (index === currentSlide) {
                         item.style.display = 'block';
+                        item.style.opacity = '1';
                     } else {
                         item.style.display = 'none';
+                        item.style.opacity = '0';
                     }
                 });
-            } else {
-                // For slide animation - show all but scroll to current
-                items.forEach((item, index) => {
-                    item.style.display = 'block';
-                });
-                
-                if (items[currentSlide]) {
-                    items[currentSlide].scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
+                slidesWrapper.style.transform = 'translateX(0%)';
             }
         }
 
         function updateAnimationType() {
             animationType = document.getElementById('animationType').value;
+            const slidesWrapper = document.getElementById('slidesWrapper');
+            if (!slidesWrapper) return;
+            
+            if (animationType === 'slide') {
+                const items = document.querySelectorAll('.barcode-item');
+                items.forEach(item => {
+                    item.style.display = 'block';
+                    item.style.opacity = '1';
+                });
+            }
+            
             updateSlidePosition();
         }
 
-        // Slideshow functions
         function toggleSlideshow() {
             if (isSlideshow) {
                 stopSlideshow();
@@ -514,7 +468,7 @@ None>by BDK234</p>
             stopSlideshow();
             document.getElementById('result').innerHTML = '';
             document.getElementById('searchInput').value = '';
-            document.getElementById('slideshowControls').style.display = 'none';
+            document.getElementById('slideshowControls').classList.remove('active');
             slides = [];
             currentSlide = 0;
             isAnimating = false;
@@ -535,10 +489,18 @@ None>by BDK234</p>
             }
         });
 
-        // Initialize menu as hidden
-        document.getElementById('slideMenu').style.display = 'none';
-        document.getElementById('menuOverlay').style.display = 'none';
-        document.getElementById('slideshowControls').style.display = 'none';
+        // Wait for menu to load before setting active state
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const menuItems = document.querySelectorAll('.menu-item');
+                menuItems.forEach(item => {
+                    item.classList.remove('active');
+                    if (item.textContent.includes('PLU Barcode Generator')) {
+                        item.classList.add('active');
+                    }
+                });
+            }, 100);
+        });
     </script>
 </body>
 </html>
