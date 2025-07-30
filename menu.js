@@ -23,7 +23,7 @@ const MENU_CONFIG = {
             href: "#",
             icon: "barcode",
             title: "Custom Barcode",
-            subtitle: "(COMING SOON)"
+            subtitle: "(Soon)"
         }
     ]
 };
