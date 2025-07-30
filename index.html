@@ -240,13 +240,22 @@
                 
                 excelData = jsonData;
                 
+                localStorage.setItem('excelData', JSON.stringify(excelData));
+                localStorage.setItem('dataLoadTime', new Date().toISOString());
+                
+                updateDataStatus(`Data berhasil dimuat! Total: ${excelData.length} item`, 'success');
+                document.getElementById('dataStatus').style.display = 'block';
+                setInputEnabled(true);
+                
+                document.getElementById('searchInput').focus();
+                
             } catch (error) {
                 console.error('Error loading Excel data:', error);
                 
-                const savedData = JSON.parse('[]');
+                const savedData = localStorage.getItem('excelData');
                 if (savedData) {
                     excelData = JSON.parse(savedData);
-                    const loadTime = 'Unknown';
+                    const loadTime = localStorage.getItem('dataLoadTime');
                     const timeStr = loadTime ? new Date(loadTime).toLocaleString('id-ID') : 'Unknown';
                     
                     updateDataStatus(`⚠️ Menggunakan data backup (${excelData.length} item) - Dimuat: ${timeStr}`, 'error');
