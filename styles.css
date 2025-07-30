@@ -25,10 +25,21 @@ body {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
+    /* Tambahan untuk animasi hide/show */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 1;
+    transform: scale(1);
 }
 
 .menu-toggle:hover {
     background: #555;
+}
+
+/* Untuk menyembunyikan tombol ketika menu terbuka */
+.menu-toggle.hidden {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none; /* Tidak bisa diklik ketika hidden */
 }
 
 .slide-menu {

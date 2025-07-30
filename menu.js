@@ -32,6 +32,7 @@ const MENU_CONFIG = {
 function toggleMenu() {
     const menu = document.getElementById('slideMenu');
     const overlay = document.getElementById('menuOverlay');
+    const menuButton = document.querySelector('.menu-toggle');
     
     if (menu.classList.contains('open')) {
         closeMenu();
@@ -43,17 +44,23 @@ function toggleMenu() {
 function openMenu() {
     const menu = document.getElementById('slideMenu');
     const overlay = document.getElementById('menuOverlay');
+    const menuButton = document.querySelector('.menu-toggle');
     
     menu.classList.add('open');
     overlay.classList.add('open');
+    // SEMBUNYIKAN tombol menu ketika slide menu terbuka
+    menuButton.classList.add('hidden');
 }
 
 function closeMenu() {
     const menu = document.getElementById('slideMenu');
     const overlay = document.getElementById('menuOverlay');
+    const menuButton = document.querySelector('.menu-toggle');
     
     menu.classList.remove('open');
     overlay.classList.remove('open');
+    // TAMPILKAN kembali tombol menu ketika slide menu tertutup
+    menuButton.classList.remove('hidden');
 }
 
 // Generate Menu HTML
@@ -117,6 +124,25 @@ function setupMenuEventListeners() {
     // Close menu on escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
+            closeMenu();
+        }
+    });
+
+    // Close menu with swipe down gesture (for mobile)
+    const slideMenu = document.getElementById('slideMenu');
+    let startY = 0;
+    let currentY = 0;
+
+    slideMenu.addEventListener('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+    });
+
+    slideMenu.addEventListener('touchmove', function(e) {
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+        
+        // If swipe down more than 100px, close menu
+        if (diff > 100) {
             closeMenu();
         }
     });
