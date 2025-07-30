@@ -155,7 +155,7 @@
         }
 
         function getProductImageUrl(plu) {
-            return `https://assets.klikindomaret.com/products/${plu}/${plu}_thumb.jpg`;
+            return `https://cdn-klik.klikindomaret.com/klik-catalog/product/${plu}_1.jpg`;
         }
 
         function createProductImage(plu, index) {
@@ -240,22 +240,13 @@
                 
                 excelData = jsonData;
                 
-                localStorage.setItem('excelData', JSON.stringify(excelData));
-                localStorage.setItem('dataLoadTime', new Date().toISOString());
-                
-                updateDataStatus(`Data berhasil dimuat! Total: ${excelData.length} item`, 'success');
-                document.getElementById('dataStatus').style.display = 'block';
-                setInputEnabled(true);
-                
-                document.getElementById('searchInput').focus();
-                
             } catch (error) {
                 console.error('Error loading Excel data:', error);
                 
-                const savedData = localStorage.getItem('excelData');
+                const savedData = JSON.parse('[]');
                 if (savedData) {
                     excelData = JSON.parse(savedData);
-                    const loadTime = localStorage.getItem('dataLoadTime');
+                    const loadTime = 'Unknown';
                     const timeStr = loadTime ? new Date(loadTime).toLocaleString('id-ID') : 'Unknown';
                     
                     updateDataStatus(`⚠️ Menggunakan data backup (${excelData.length} item) - Dimuat: ${timeStr}`, 'error');
