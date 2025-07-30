@@ -174,26 +174,35 @@ body {
 .container {
     max-width: 800px;
     margin: 0 auto;
-    background: white;
-    border-radius: 20px;
+    background: #f9f9f9;
+    border-radius: 25px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
     overflow: hidden;
-    margin-top: 60px; /* Space for menu toggl#e */
+    margin-top: 60px;
 }
 
 .header {
-    background: black;
+    background: linear-gradient(135deg, #2c2c2c, #1a1a1a);
     color: white;
     padding: 30px;
     text-align: center;
-    margin-bottom: 20px;
-    margin-top: 100px; /* Space for menu toggle */
+    margin-bottom: 0;
+    margin-top: 0;
+    position: relative;
+    border-radius: 0 0 25px 25px;
 }
 
 .header h1 {
     font-size: 0.9em !important;
     margin-bottom: 10px;
     font-weight: 300;
+    position: relative;
+    z-index: 2;
+}
+
+.content {
+    padding: 30px;
+    margin-top: 0;
 }
 
 .header h2 {
