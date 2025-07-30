@@ -167,7 +167,7 @@ body {
     border-radius: 20px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
     overflow: hidden;
-    margin-top: 60px; /* Space for menu toggle */
+    margin-top: 60px; /* Space for menu toggl#e */
 }
 
 .header {
@@ -180,7 +180,7 @@ body {
 }
 
 .header h1 {
-    font-size: 0.9em;
+    font-size: 0.9em !important;
     margin-bottom: 10px;
     font-weight: 300;
 }
