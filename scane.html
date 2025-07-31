@@ -33,12 +33,6 @@
                     Home
                 </a>
             </nav>
-            <div class="menu-footer">
-                <p>© 2025 QR Tools</p>
-                <div class="donation-info">Made with ❤️</div>
-            </div>
-        </div>
-
         <!-- Menu Overlay -->
         <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
 
@@ -51,47 +45,47 @@
             <div class="scanner-container">
                 <div class="scanner-title">📷 Live Camera Scanner</div>
                 
-                <div class="instruction">
+                <div class="qr-instruction">
                     Arahkan kamera ke QR Code atau Barcode untuk memindai
                 </div>
 
                 <div id="reader"></div>
                 
-                <div class="controls">
-                    <button id="start-btn" class="btn" onclick="startScanning()">
+                <div class="scanner-controls">
+                    <button id="start-btn" class="qr-btn" onclick="startScanning()">
                         🚀 Mulai Scanner
                     </button>
-                    <button id="stop-btn" class="btn btn-stop" onclick="stopScanning()" style="display: none;">
+                    <button id="stop-btn" class="qr-btn qr-btn-stop" onclick="stopScanning()" style="display: none;">
                         ⏹️ Stop Scanner
                     </button>
                 </div>
 
-                <div class="camera-selection" id="camera-selection" style="display: none;">
+                <div class="qr-camera-selection" id="camera-selection" style="display: none;">
                     <label for="camera-select">Pilih Kamera:</label>
-                    <select id="camera-select" class="camera-select" onchange="switchCamera()">
+                    <select id="camera-select" class="qr-camera-select" onchange="switchCamera()">
                     </select>
                 </div>
             </div>
 
             <!-- Result Container -->
-            <div id="result-container" class="result-container">
-                <div class="result-header">
-                    <div class="result-icon">✓</div>
+            <div id="result-container" class="qr-result-container">
+                <div class="qr-result-header">
+                    <div class="qr-result-icon">✓</div>
                     <h3>Hasil Scan:</h3>
                 </div>
-                <div id="result-content" class="result-content"></div>
-                <div class="result-actions">
-                    <button class="btn copy-btn" onclick="copyResult()">
+                <div id="result-content" class="qr-result-content"></div>
+                <div class="qr-result-actions">
+                    <button class="qr-copy-btn" onclick="copyResult()">
                         📋 Copy Text
                     </button>
-                    <button class="btn open-btn" onclick="openResult()" id="open-btn" style="display: none;">
+                    <button class="qr-open-btn" onclick="openResult()" id="open-btn" style="display: none;">
                         🔗 Buka Link
                     </button>
                 </div>
             </div>
 
             <!-- Status Messages -->
-            <div id="status-message" class="status-message"></div>
+            <div id="status-message" class="qr-status-message"></div>
         </div>
     </div>
 
@@ -320,7 +314,7 @@
 
         function showStatus(message, type) {
             const statusDiv = document.getElementById('status-message');
-            statusDiv.className = `status-message status-${type}`;
+            statusDiv.className = `qr-status-message qr-status-${type}`;
             statusDiv.textContent = message;
             statusDiv.style.display = 'block';
             

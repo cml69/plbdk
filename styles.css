@@ -634,4 +634,250 @@ td {
     .data-status {
         display: none;
     }
+    .scanner-container {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.scanner-title {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+#reader {
+    border-radius: 15px;
+    overflow: hidden;
+    margin: 0 auto 20px;
+    max-width: 100%;
+}
+
+#reader > div {
+    border-radius: 15px !important;
+}
+
+#reader video {
+    border-radius: 15px !important;
+}
+
+.scanner-controls {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.qr-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 5px;
+}
+
+.qr-btn:hover {
+    background: #5a6fd8;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.qr-btn:active {
+    transform: translateY(0);
+}
+
+.qr-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.qr-btn-stop {
+    background: #dc3545;
+}
+
+.qr-btn-stop:hover {
+    background: #c82333;
+}
+
+.qr-result-container {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    margin-top: 20px;
+    display: none;
+}
+
+.qr-result-container.show {
+    display: block;
+    animation: qrSlideUp 0.3s ease;
+}
+
+@keyframes qrSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.qr-result-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.qr-result-icon {
+    width: 30px;
+    height: 30px;
+    background: #28a745;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    margin-right: 15px;
+    font-size: 1.2rem;
+}
+
+.qr-result-content {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    border-left: 4px solid #667eea;
+    word-break: break-all;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    min-height: 60px;
+}
+
+.qr-result-actions {
+    text-align: center;
+}
+
+.qr-copy-btn {
+    background: #28a745;
+    font-size: 0.95rem;
+    padding: 10px 20px;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    margin: 5px;
+    transition: all 0.3s ease;
+}
+
+.qr-copy-btn:hover {
+    background: #218838;
+}
+
+.qr-open-btn {
+    background: #007bff;
+    font-size: 0.95rem;
+    padding: 10px 20px;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    margin: 5px;
+    transition: all 0.3s ease;
+}
+
+.qr-open-btn:hover {
+    background: #0056b3;
+}
+
+.qr-status-message {
+    text-align: center;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 10px;
+    font-weight: 500;
+    display: none;
+}
+
+.qr-status-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.qr-status-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.qr-status-info {
+    background: #cce7ff;
+    color: #004085;
+    border: 1px solid #99d3ff;
+}
+
+.qr-instruction {
+    text-align: center;
+    color: #666;
+    margin: 20px 0;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.qr-camera-selection {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.qr-camera-select {
+    padding: 8px 15px;
+    border: 2px solid #ddd;
+    border-radius: 20px;
+    background: white;
+    font-size: 0.9rem;
+    max-width: 200px;
+    margin: 0 10px;
+}
+
+/* Hide default html5-qrcode styling */
+#reader__dashboard_section {
+    display: none !important;
+}
+
+#reader__header_message {
+    display: none !important;
+}
+
+#reader__scan_region {
+    border-radius: 15px !important;
+}
+
+/* Mobile responsive untuk QR Scanner */
+@media (max-width: 768px) {
+    .scanner-container {
+        padding: 20px;
+    }
+    
+    .qr-result-content {
+        font-size: 0.9rem;
+        padding: 15px;
+    }
+    
+    .qr-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}
 }
