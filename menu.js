@@ -20,7 +20,7 @@ const MENU_CONFIG = {
         },
         {
             id: "custom-barcode",
-            href: "#",
+            href: "scane.html",
             icon: "barcode",
             title: "Custom Barcode",
             subtitle: "(Soon)"
