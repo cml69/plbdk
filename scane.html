@@ -95,27 +95,9 @@
         </div>
     </div>
 
+    <script src="menu.js"></script>
+    <script src="footer.js"></script>
     <script>
-        // Menu Functions
-        function toggleMenu() {
-            const menu = document.getElementById('slideMenu');
-            const overlay = document.getElementById('menuOverlay');
-            const menuToggle = document.querySelector('.menu-toggle');
-            
-            menu.classList.toggle('open');
-            overlay.classList.toggle('open');
-            menuToggle.classList.toggle('hidden');
-        }
-
-        function closeMenu() {
-            const menu = document.getElementById('slideMenu');
-            const overlay = document.getElementById('menuOverlay');
-            const menuToggle = document.querySelector('.menu-toggle');
-            
-            menu.classList.remove('open');
-            overlay.classList.remove('open');
-            menuToggle.classList.remove('hidden');
-        }
 
         // QR Scanner Functions
         let html5QrcodeScanner = null;
