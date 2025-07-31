@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Text & QR Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        .mode-selector {
+            display: flex;
+            background: #f0f0f0;
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 20px;
+            gap: 5px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .camera-container {
+            position: relative;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #f0f0f0;
+            height: 350px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .placeholder {
+            color: #666;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .result-container {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 120px;
+            border: 2px dashed #667eea;
+        }
+
+        .result-text {
+            color: #333;
+            font-size: 1.1rem;
+            word-break: break-word;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .copy-btn {
+            background: #28a745;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .clear-btn {
+            background: #dc3545;
+        }
+
+        .clear-btn:hover {
+            background: #c82333;
+        }
+
+        .capture-btn {
+            background: #fd7e14;
+        }
+
+        .capture-btn:hover {
+            background: #e8610e;
+        }
+
+        .status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .scanner-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #667eea, transparent);
+            animation: scan 2s linear infinite;
+            z-index: 10;
+        }
+
+        .ocr-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(102, 126, 234, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .ocr-indicator {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(350px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .processing {
+            animation: pulse 1.5s infinite;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .stats {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .stat-item {
+            color: #495057;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+
+            .mode-selector {
+                flex-direction: column;
+            }
+
+            .result-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="menu-container"></div>
+    <div class="container">
+        <h1>🔍 Smart Scanner</h1>
+        <div class="subtitle">Scan QR Code & Extract Text from Images</div>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="qr">📱 QR Scanner</button>
+            <button class="mode-btn" data-mode="ocr">📄 Text Scanner</button>
+            <button class="mode-btn" data-mode="auto">🤖 Auto Mode</button>
+        </div>
+
+        <div class="camera-container">
+            <video id="video" class="hidden"></video>
+            <div id="placeholder" class="placeholder">
+                <p><strong>QR Scanner Mode</strong></p>
+                <p>Klik "Mulai Kamera" untuk memindai QR Code</p>
+                <p>atau upload gambar QR Code</p>
+            </div>
+            <div id="scannerLine" class="scanner-line hidden"></div>
+            <div id="ocrOverlay" class="ocr-overlay hidden">
+                <div class="ocr-indicator">🔍 Sedang membaca teks...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn">📷 Mulai Kamera</button>
+            <button id="captureBtn" class="capture-btn hidden">📸 Ambil Foto</button>
+            <button id="stopBtn" disabled>⏹️ Stop Kamera</button>
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <button id="uploadBtn">📁 Upload Gambar</button>
+            </div>
+        </div>
+
+        <div id="status" class="status hidden"></div>
+
+        <div class="result-container">
+            <div id="resultText" class="result-text">
+                Hasil scan akan muncul di sini...
+            </div>
+            <div class="result-actions">
+                <button id="copyBtn" class="copy-btn hidden">📋 Salin Teks</button>
+                <button id="clearBtn" class="clear-btn hidden">🗑️ Bersihkan</button>
+            </div>
+        </div>
+
+        <div class="stats hidden" id="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="qrCount">0</div>
+                <div class="stat-label">QR Scanned</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="textCount">0</div>
+                <div class="stat-label">Text Extracted</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">Total</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <script>
+        class SmartScanner {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.scanning = false;
+                this.stream = null;
+                this.currentMode = 'qr';
+                this.stats = { qr: 0, text: 0 };
+                
+                this.initElements();
+                this.bindEvents();
+                this.updatePlaceholder();
+            }
+
+            initElements() {
+                this.startBtn = document.getElementById('startBtn');
+                this.captureBtn = document.getElementById('captureBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.uploadBtn = document.getElementById('uploadBtn');
+                this.fileInput = document.getElementById('fileInput');
+                this.placeholder = document.getElementById('placeholder');
+                this.status = document.getElementById('status');
+                this.resultText = document.getElementById('resultText');
+                this.copyBtn = document.getElementById('copyBtn');
+                this.clearBtn = document.getElementById('clearBtn');
+                this.scannerLine = document.getElementById('scannerLine');
+                this.ocrOverlay = document.getElementById('ocrOverlay');
+                this.statsEl = document.getElementById('stats');
+                this.modeBtns = document.querySelectorAll('.mode-btn');
+            }
+
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.startCamera());
+                this.captureBtn.addEventListener('click', () => this.capturePhoto());
+                this.stopBtn.addEventListener('click', () => this.stopCamera());
+                this.uploadBtn.addEventListener('click', () => this.fileInput.click());
+                this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+                this.copyBtn.addEventListener('click', () => this.copyToClipboard());
+                this.clearBtn.addEventListener('click', () => this.clearResult());
+                
+                this.modeBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.switchMode(e.target.dataset.mode));
+                });
+            }
+
+            switchMode(mode) {
+                this.currentMode = mode;
+                this.modeBtns.forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+                this.updatePlaceholder();
+                
+                if (this.scanning) {
+                    this.stopCamera();
+                }
+            }
+
+            updatePlaceholder() {
+                const placeholders = {
+                    qr: {
+                        title: 'QR Scanner Mode',
+                        desc: 'Klik "Mulai Kamera" untuk memindai QR Code atau upload gambar QR Code'
+                    },
+                    ocr: {
+                        title: 'Text Scanner Mode', 
+                        desc: 'Ambil foto teks atau upload gambar untuk mengekstrak teks'
+                    },
+                    auto: {
+                        title: 'Auto Mode',
+                        desc: 'Otomatis mendeteksi QR Code dan teks dalam gambar'
+                    }
+                };
+                
+                const placeholder = placeholders[this.currentMode];
+                this.placeholder.innerHTML = `
+                    <p><strong>${placeholder.title}</strong></p>
+                    <p>${placeholder.desc}</p>
+                `;
+            }
+
+            async startCamera() {
+                try {
+                    this.showStatus('Meminta izin kamera...', 'info');
+                    
+                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        } 
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    this.video.play();
+                    
+                    this.video.addEventListener('loadedmetadata', () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        
+                        if (this.currentMode === 'qr' || this.currentMode === 'auto') {
+                            this.startScanning();
+                        }
+                    });
+
+                    this.placeholder.classList.add('hidden');
+                    this.video.classList.remove('hidden');
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    
+                    if (this.currentMode === 'ocr') {
+                        this.captureBtn.classList.remove('hidden');
+                        this.showStatus('Kamera aktif. Klik "Ambil Foto" untuk scan teks', 'success');
+                    } else {
+                        this.scannerLine.classList.remove('hidden');
+                        this.showStatus('Kamera aktif. Arahkan ke QR Code...', 'success');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    this.showCameraError(error);
+                }
+            }
+
+            stopCamera() {
+                this.scanning = false;
+                
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                
+                this.video.classList.add('hidden');
+                this.scannerLine.classList.add('hidden');
+                this.captureBtn.classList.add('hidden');
+                this.placeholder.classList.remove('hidden');
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                
+                this.showStatus('Kamera dihentikan', 'info');
+                this.updatePlaceholder();
+            }
+
+            startScanning() {
+                this.scanning = true;
+                this.scan();
+            }
+
+            scan() {
+                if (!this.scanning) return;
+                
+                if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                    this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // Try QR code detection
+                    const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+                    if (qrCode) {
+                        this.handleResult(qrCode.data, 'qr');
+                        return;
+                    }
+                }
+                
+                requestAnimationFrame(() => this.scan());
+            }
+
+            async capturePhoto() {
+                if (this.video.readyState !== this.video.HAVE_ENOUGH_DATA) return;
+                
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                const imageData = this.canvas.toDataURL('image/jpeg');
+                await this.processImage(imageData);
+            }
+
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if (!file.type.startsWith('image/')) {
+                    this.showStatus('File harus berupa gambar', 'error');
+                    return;
+                }
+
+                this.showStatus('Memproses gambar...', 'info');
+                
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    await this.processImage(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            async processImage(imageSrc) {
+                const img = new Image();
+                img.onload = async () => {
+                    // Set canvas size to image size
+                    this.canvas.width = img.width;
+                    this.canvas.height = img.height;
+                    this.ctx.drawImage(img, 0, 0);
+                    
+                    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    let resultFound = false;
+                    
+                    // Try QR code first
+                    if (this.currentMode === 'qr' || this.currentMode === 'auto') {
+                        const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+                        if (qrCode) {
+                            this.handleResult(qrCode.data, 'qr');
+                            resultFound = true;
+                        }
+                    }
+                    
+                    // Try OCR if no QR code found or in OCR/auto mode
+                    if (!resultFound && (this.currentMode === 'ocr' || this.currentMode === 'auto')) {
+                        await this.performOCR(imageSrc);
+                    } else if (!resultFound && this.currentMode === 'qr') {
+                        this.showStatus('QR Code tidak ditemukan dalam gambar', 'warning');
+                    }
+                };
+                img.src = imageSrc;
+            }
+
+            async performOCR(imageSrc) {
+                try {
+                    this.ocrOverlay.classList.remove('hidden');
+                    this.showStatus('Menganalisis teks dalam gambar...', 'info');
+                    
+                    const { data: { text } } = await Tesseract.recognize(
+                        imageSrc,
+                        'eng+ind', // English and Indonesian
+                        {
+                            logger: m => {
+                                if (m.status === 'recognizing text') {
+                                    const progress = Math.round(m.progress * 100);
+                                    this.showStatus(`Membaca teks... ${progress}%`, 'info');
+                                }
+                            }
+                        }
+                    );
+                    
+                    this.ocrOverlay.classList.add('hidden');
+                    
+                    if (text.trim()) {
+                        this.handleResult(text.trim(), 'text');
+                    } else {
+                        this.showStatus('Tidak ada teks yang terdeteksi dalam gambar', 'warning');
+                    }
+                    
+                } catch (error) {
+                    console.error('OCR Error:', error);
+                    this.ocrOverlay.classList.add('hidden');
+                    this.showStatus('Gagal membaca teks. Coba dengan gambar yang lebih jelas.', 'error');
+                }
+            }
+
+            handleResult(data, type) {
+                this.scanning = false;
+                
+                // Update result
+                this.resultText.textContent = data;
+                this.copyBtn.classList.remove('hidden');
+                this.clearBtn.classList.remove('hidden');
+                
+                // Update stats
+                this.stats[type]++;
+                this.updateStats();
+                
+                // Show success message
+                const typeLabel = type === 'qr' ? 'QR Code' : 'Teks';
+                this.showStatus(`${typeLabel} berhasil dibaca!`, 'success');
+                
+                // Add vibration if supported
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
+                
+                // Continue scanning for QR mode after delay
+                if (this.stream && (this.currentMode === 'qr' || this.currentMode === 'auto')) {
+                    setTimeout(() => {
+                        if (this.stream && !this.scanning) {
+                            this.startScanning();
+                            this.showStatus('Memindai QR Code berikutnya...', 'info');
+                        }
+                    }, 3000);
+                }
+            }
+
+            updateStats() {
+                document.getElementById('qrCount').textContent = this.stats.qr;
+                document.getElementById('textCount').textContent = this.stats.text;
+                document.getElementById('totalCount').textContent = this.stats.qr + this.stats.text;
+                this.statsEl.classList.remove('hidden');
+            }
+
+            async copyToClipboard() {
+                try {
+                    await navigator.clipboard.writeText(this.resultText.textContent);
+                    this.showStatus('Teks berhasil disalin ke clipboard!', 'success');
+                    
+                    const originalText = this.copyBtn.textContent;
+                    this.copyBtn.textContent = '✅ Tersalin!';
+                    setTimeout(() => {
+                        this.copyBtn.textContent = originalText;
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Failed to copy:', error);
+                    this.showStatus('Gagal menyalin teks. Silakan salin manual.', 'error');
+                }
+            }
+
+            clearResult() {
+                this.resultText.textContent = 'Hasil scan akan muncul di sini...';
+                this.copyBtn.classList.add('hidden');
+                this.clearBtn.classList.add('hidden');
+                this.showStatus('Hasil dibersihkan', 'info');
+            }
+
+            showCameraError(error) {
+                let message = 'Gagal mengakses kamera. ';
+                
+                if (error.name === 'NotAllowedError') {
+                    message += 'Izin kamera ditolak. Silakan izinkan akses kamera dan coba lagi.';
+                } else if (error.name === 'NotFoundError') {
+                    message += 'Kamera tidak ditemukan.';
+                } else {
+                    message += 'Pastikan browser mendukung kamera.';
+                }
+                
+                this.showStatus(message, 'error');
+            }
+
+            showStatus(message, type) {
+                this.status.textContent = message;
+                this.status.className = `status ${type}`;
+                this.status.classList.remove('hidden');
+                
+                if (type === 'success' || type === 'info') {
+                    setTimeout(() => {
+                        this.status.classList.add('hidden');
+                    }, 5000);
+                }
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                document.getElementById('status').textContent = 'Browser tidak mendukung akses kamera';
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').classList.remove('hidden');
+                document.getElementById('startBtn').disabled = true;
+                return;
+            }
+            
+            new SmartScanner();
+        });
+    </script>
+</body>
+</html>
