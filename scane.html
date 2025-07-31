@@ -3,39 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner - Scan & Decode Online</title>
+    <title>QR Code Scanner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="menu-container"></div>
     <div class="container">
-        <!-- Menu Toggle Button -->
-        <button class="menu-toggle" onclick="toggleMenu()">☰ Menu</button>
-
-        <!-- Slide Menu -->
-        <div class="slide-menu" id="slideMenu">
-            <div class="menu-header">
-                <div class="menu-logo">QR</div>
-                <h3 class="menu-title">QR Code Tools</h3>
-                <p class="menu-subtitle">Scanner & Generator</p>
-            </div>
-            <nav class="menu-nav">
-                <a href="#" class="menu-item active">
-                    <div class="menu-icon barcode"></div>
-                    QR Scanner
-                </a>
-                <a href="#" class="menu-item">
-                    <div class="menu-icon box"></div>
-                    QR Generator
-                </a>
-                <a href="#" class="menu-item">
-                    <div class="menu-icon home"></div>
-                    Home
-                </a>
-            </nav>
-        <!-- Menu Overlay -->
-        <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
-
         <div class="header">
             <h1>🔍 QR Code Scanner</h1>
             <p>Scan QR codes & Barcodes dengan kamera</p>
@@ -92,7 +66,6 @@
     <script src="menu.js"></script>
     <script src="footer.js"></script>
     <script>
-
         // QR Scanner Functions
         let html5QrcodeScanner = null;
         let currentResult = '';
