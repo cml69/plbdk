@@ -98,12 +98,12 @@
                     // Populate camera selection dropdown
                     populateCameraSelect(devices);
                     
-                    // Configuration for scanning
+                    // Configuration for scanning - OPTIMIZED untuk QR code besar (1200+ karakter)
                     const config = {
-                        fps: 10,    // Scans per second
+                        fps: 8,    // Dikurangi dari 10 ke 8 untuk akurasi lebih baik
                         qrbox: function(viewfinderWidth, viewfinderHeight) {
-                            // Square QR box with 70% of the smaller dimension
-                            let minEdgePercentage = 0.7;
+                            // Square QR box diperbesar dari 70% ke 85% untuk QR code besar
+                            let minEdgePercentage = 0.85; // KUNCI UTAMA: perbesar dari 0.7 ke 0.85
                             let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
                             let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
                             return {
@@ -112,7 +112,18 @@
                             };
                         },
                         rememberLastUsedCamera: true,
-                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+                        // Tambahan untuk QR code dengan data besar
+                        aspectRatio: 1.0,
+                        disableFlip: false,
+                        videoConstraints: {
+                            facingMode: "environment",
+                            advanced: [{
+                                focusMode: "continuous",
+                                exposureMode: "continuous",
+                                whiteBalanceMode: "continuous"
+                            }]
+                        }
                     };
                     
                     // Start scanning with the first camera (usually back camera)
@@ -191,15 +202,24 @@
                     await html5QrcodeScanner.stop();
                     
                     const config = {
-                        fps: 10,
+                        fps: 8, // Konsisten dengan startScanning
                         qrbox: function(viewfinderWidth, viewfinderHeight) {
-                            let minEdgePercentage = 0.7;
+                            let minEdgePercentage = 0.85; // Konsisten dengan startScanning
                             let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
                             let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
                             return {
                                 width: qrboxSize,
                                 height: qrboxSize
                             };
+                        },
+                        aspectRatio: 1.0,
+                        disableFlip: false,
+                        videoConstraints: {
+                            advanced: [{
+                                focusMode: "continuous",
+                                exposureMode: "continuous",
+                                whiteBalanceMode: "continuous"
+                            }]
                         }
                     };
                     
