@@ -45,80 +45,85 @@
             padding: 20px;
         }
 
-        /* Swipe Container Styles */
+        /* Swipe & Touch Styles */
         .slideshow-container {
             position: relative;
             overflow: hidden;
-            touch-action: pan-y pinch-zoom;
-            user-select: none;
+            touch-action: pan-y;
+            cursor: grab;
+        }
+
+        .slideshow-container:active {
+            cursor: grabbing;
         }
 
         .slides-wrapper {
             display: flex;
-            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             will-change: transform;
         }
 
         .slides-wrapper.no-transition {
-            transition: none;
+            transition: none !important;
         }
 
         .barcode-item {
             flex: 0 0 100%;
             width: 100%;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
-        /* Swipe indicators */
-        .swipe-indicator {
+        /* Touch indicators */
+        .touch-indicator {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 24px;
-            color: rgba(255, 255, 255, 0.8);
             background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 18px;
             opacity: 0;
             transition: opacity 0.3s ease;
-            z-index: 10;
             pointer-events: none;
+            z-index: 10;
         }
 
-        .swipe-indicator.left {
+        .touch-indicator.left {
             left: 20px;
         }
 
-        .swipe-indicator.right {
+        .touch-indicator.right {
             right: 20px;
         }
 
-        .swipe-indicator.show {
-            opacity: 1;
+        .slideshow-container:hover .touch-indicator {
+            opacity: 0.7;
         }
 
-        /* Touch feedback */
-        .slideshow-container.swiping .slides-wrapper {
-            transition: none;
+        /* Swipe hint */
+        .swipe-hint {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 14px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            margin: 10px 0;
         }
 
-        /* Mobile optimizations */
+        /* Mobile responsive */
         @media (max-width: 768px) {
-            .swipe-indicator {
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
+            .touch-indicator {
+                display: none;
             }
             
-            .swipe-indicator.left {
-                left: 10px;
-            }
-            
-            .swipe-indicator.right {
-                right: 10px;
+            .swipe-hint {
+                font-size: 12px;
+                padding: 8px;
             }
         }
     </style>
@@ -198,15 +203,15 @@
         let animationType = 'slide';
         let isAnimating = false;
 
-        // Swipe functionality variables
-        let startX = 0;
-        let startY = 0;
-        let currentX = 0;
-        let currentY = 0;
-        let isSwiping = false;
-        let swipeThreshold = 50;
-        let swipeVelocityThreshold = 0.3;
-        let swipeStartTime = 0;
+        // Touch/Swipe variables
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        let isDragging = false;
+        let startTransform = 0;
+        let currentTransform = 0;
+        let minSwipeDistance = 50;
 
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
@@ -326,9 +331,6 @@
                 
                 excelData = jsonData;
                 
-                localStorage.setItem('excelData', JSON.stringify(excelData));
-                localStorage.setItem('dataLoadTime', new Date().toISOString());
-                
                 updateDataStatus(`Data berhasil dimuat! Total: ${excelData.length} item`, 'success');
                 document.getElementById('dataStatus').style.display = 'block';
                 setInputEnabled(true);
@@ -420,13 +422,17 @@
             if (results.length > 0) {
                 if (results.length > 1) {
                     slideshowControls.classList.add('active');
+                    html += '<div class="swipe-hint">💡 Geser kanan/kiri atau klik di area barcode untuk navigasi</div>';
                 } else {
                     slideshowControls.classList.remove('active');
                 }
 
                 html += '<div class="slideshow-container" id="slideshowContainer">';
-                html += '<div class="swipe-indicator left" id="swipeLeft">‹</div>';
-                html += '<div class="swipe-indicator right" id="swipeRight">›</div>';
+                
+                // Touch indicators
+                html += '<div class="touch-indicator left" id="leftIndicator">‹</div>';
+                html += '<div class="touch-indicator right" id="rightIndicator">›</div>';
+                
                 html += '<div class="slides-wrapper" id="slidesWrapper">';
                 
                 results.forEach((item, index) => {
@@ -491,174 +497,123 @@
                     }
                 });
                 
+                // Setup touch/swipe events
+                setupTouchEvents();
                 updateSlidePosition();
-                setupSwipeEvents();
             }
         }
 
-        function setupSwipeEvents() {
-            const slideshowContainer = document.getElementById('slideshowContainer');
-            if (!slideshowContainer || slides.length <= 1) return;
+        function setupTouchEvents() {
+            const container = document.getElementById('slideshowContainer');
+            if (!container || slides.length <= 1) return;
+
+            // Mouse events
+            container.addEventListener('mousedown', handleStart, { passive: false });
+            container.addEventListener('mousemove', handleMove, { passive: false });
+            container.addEventListener('mouseup', handleEnd, { passive: false });
+            container.addEventListener('mouseleave', handleEnd, { passive: false });
 
             // Touch events
-            slideshowContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-            slideshowContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            slideshowContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+            container.addEventListener('touchstart', handleStart, { passive: false });
+            container.addEventListener('touchmove', handleMove, { passive: false });
+            container.addEventListener('touchend', handleEnd, { passive: false });
+            container.addEventListener('touchcancel', handleEnd, { passive: false });
 
-            // Mouse events for desktop
-            slideshowContainer.addEventListener('mousedown', handleMouseStart);
-            slideshowContainer.addEventListener('mousemove', handleMouseMove);
-            slideshowContainer.addEventListener('mouseup', handleMouseEnd);
-            slideshowContainer.addEventListener('mouseleave', handleMouseEnd);
+            // Click event for simple tap navigation
+            container.addEventListener('click', handleClick, { passive: true });
 
-            // Prevent context menu on long press
-            slideshowContainer.addEventListener('contextmenu', (e) => {
-                if (isSwiping) {
-                    e.preventDefault();
-                }
-            });
+            // Prevent context menu and text selection
+            container.addEventListener('contextmenu', e => e.preventDefault());
         }
 
-        function handleTouchStart(e) {
-            if (slides.length <= 1) return;
-            
-            const touch = e.touches[0];
-            startSwipe(touch.clientX, touch.clientY);
-        }
-
-        function handleTouchMove(e) {
-            if (!isSwiping || slides.length <= 1) return;
-            
-            e.preventDefault();
-            const touch = e.touches[0];
-            updateSwipe(touch.clientX, touch.clientY);
-        }
-
-        function handleTouchEnd(e) {
-            if (!isSwiping || slides.length <= 1) return;
-            
-            endSwipe();
-        }
-
-        function handleMouseStart(e) {
+        function handleStart(e) {
             if (slides.length <= 1) return;
             
             e.preventDefault();
-            startSwipe(e.clientX, e.clientY);
-        }
-
-        function handleMouseMove(e) {
-            if (!isSwiping || slides.length <= 1) return;
+            isDragging = true;
             
-            e.preventDefault();
-            updateSwipe(e.clientX, e.clientY);
-        }
-
-        function handleMouseEnd(e) {
-            if (!isSwiping || slides.length <= 1) return;
+            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
             
-            endSwipe();
-        }
-
-        function startSwipe(x, y) {
-            if (isAnimating) return;
+            touchStartX = clientX;
+            touchStartY = clientY;
             
-            startX = x;
-            startY = y;
-            currentX = x;
-            currentY = y;
-            isSwiping = true;
-            swipeStartTime = Date.now();
-            
-            const slideshowContainer = document.getElementById('slideshowContainer');
             const slidesWrapper = document.getElementById('slidesWrapper');
+            slidesWrapper.classList.add('no-transition');
             
-            if (slideshowContainer && slidesWrapper) {
-                slideshowContainer.classList.add('swiping');
-                slidesWrapper.classList.add('no-transition');
+            // Stop slideshow when user starts interacting
+            if (isSlideshow) {
+                stopSlideshow();
             }
         }
 
-        function updateSwipe(x, y) {
-            if (!isSwiping) return;
+        function handleMove(e) {
+            if (!isDragging || slides.length <= 1) return;
             
-            currentX = x;
-            currentY = y;
+            e.preventDefault();
             
-            const deltaX = currentX - startX;
-            const deltaY = Math.abs(currentY - startY);
+            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
             
-            // Only allow horizontal swiping if horizontal movement is greater than vertical
-            if (Math.abs(deltaX) > deltaY) {
-                const slidesWrapper = document.getElementById('slidesWrapper');
-                if (slidesWrapper && animationType === 'slide') {
-                    const baseTransform = -currentSlide * 100;
-                    const swipeOffset = (deltaX / window.innerWidth) * 100;
-                    slidesWrapper.style.transform = `translateX(${baseTransform + swipeOffset}%)`;
-                }
-                
-                // Show swipe indicators
-                const swipeLeft = document.getElementById('swipeLeft');
-                const swipeRight = document.getElementById('swipeRight');
-                
-                if (deltaX > 20 && currentSlide > 0) {
-                    swipeLeft.classList.add('show');
-                    swipeRight.classList.remove('show');
-                } else if (deltaX < -20 && currentSlide < slides.length - 1) {
-                    swipeRight.classList.add('show');
-                    swipeLeft.classList.remove('show');
+            const deltaX = clientX - touchStartX;
+            const deltaY = clientY - touchStartY;
+            
+            // Only handle horizontal swipes
+            if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+            
+            const slidesWrapper = document.getElementById('slidesWrapper');
+            const baseTransform = -currentSlide * 100;
+            const dragPercent = (deltaX / window.innerWidth) * 100;
+            
+            currentTransform = baseTransform + dragPercent;
+            slidesWrapper.style.transform = `translateX(${currentTransform}%)`;
+        }
+
+        function handleEnd(e) {
+            if (!isDragging || slides.length <= 1) return;
+            
+            isDragging = false;
+            
+            const clientX = e.type.includes('mouse') ? e.clientX : (e.changedTouches ? e.changedTouches[0].clientX : touchStartX);
+            
+            touchEndX = clientX;
+            const deltaX = touchEndX - touchStartX;
+            
+            const slidesWrapper = document.getElementById('slidesWrapper');
+            slidesWrapper.classList.remove('no-transition');
+            
+            // Determine if swipe is significant enough
+            if (Math.abs(deltaX) > minSwipeDistance) {
+                if (deltaX > 0) {
+                    // Swipe right - go to previous slide
+                    prevSlide();
                 } else {
-                    swipeLeft.classList.remove('show');
-                    swipeRight.classList.remove('show');
+                    // Swipe left - go to next slide
+                    nextSlide();
                 }
+            } else {
+                // Snap back to current slide
+                updateSlidePosition();
             }
         }
 
-        function endSwipe() {
-            if (!isSwiping) return;
+        function handleClick(e) {
+            if (slides.length <= 1) return;
             
-            const deltaX = currentX - startX;
-            const deltaY = Math.abs(currentY - startY);
-            const swipeTime = Date.now() - swipeStartTime;
-            const velocity = Math.abs(deltaX) / swipeTime;
+            const container = document.getElementById('slideshowContainer');
+            const rect = container.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const containerWidth = rect.width;
             
-            isSwiping = false;
-            
-            const slideshowContainer = document.getElementById('slideshowContainer');
-            const slidesWrapper = document.getElementById('slidesWrapper');
-            const swipeLeft = document.getElementById('swipeLeft');
-            const swipeRight = document.getElementById('swipeRight');
-            
-            if (slideshowContainer) {
-                slideshowContainer.classList.remove('swiping');
+            // Divide container into thirds: left, center, right
+            if (clickX < containerWidth / 3) {
+                // Click on left third - previous slide
+                prevSlide();
+            } else if (clickX > (containerWidth * 2) / 3) {
+                // Click on right third - next slide
+                nextSlide();
             }
-            
-            if (slidesWrapper) {
-                slidesWrapper.classList.remove('no-transition');
-            }
-            
-            if (swipeLeft) swipeLeft.classList.remove('show');
-            if (swipeRight) swipeRight.classList.remove('show');
-            
-            // Only process horizontal swipes
-            if (Math.abs(deltaX) > deltaY) {
-                const shouldSwipe = Math.abs(deltaX) > swipeThreshold || velocity > swipeVelocityThreshold;
-                
-                if (shouldSwipe) {
-                    if (deltaX > 0 && currentSlide > 0) {
-                        // Swipe right - go to previous slide
-                        prevSlide();
-                        return;
-                    } else if (deltaX < 0 && currentSlide < slides.length - 1) {
-                        // Swipe left - go to next slide
-                        nextSlide();
-                        return;
-                    }
-                }
-            }
-            
-            // Reset position if swipe wasn't successful
-            updateSlidePosition();
+            // Middle third does nothing (or could pause/play slideshow)
         }
 
         function updateSlidePosition() {
@@ -778,7 +733,6 @@
             slides = [];
             currentSlide = 0;
             isAnimating = false;
-            isSwiping = false;
         }
 
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
@@ -791,17 +745,6 @@
             if (e.ctrlKey && e.key === 'r') {
                 e.preventDefault();
                 loadExcelData();
-            }
-            
-            // Keyboard navigation for slides
-            if (slides.length > 1 && !e.ctrlKey && !e.altKey) {
-                if (e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    prevSlide();
-                } else if (e.key === 'ArrowRight') {
-                    e.preventDefault();
-                    nextSlide();
-                }
             }
         });
 
