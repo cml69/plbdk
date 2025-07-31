@@ -19,8 +19,14 @@ const MENU_CONFIG = {
             title: "Barcode Karton"
         },
         {
-            id: "custom-barcode",
+            id: "Scan-qr",
             href: "scane.html",
+            icon: "box",
+            title: "Scan QR Via Web"
+        },
+        {
+            id: "custom-barcode",
+            href: "#",
             icon: "barcode",
             title: "Custom Barcode",
             subtitle: "(Soon)"
