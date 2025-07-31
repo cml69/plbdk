@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code Scanner - Scan & Decode Online</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -20,7 +20,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 600px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -50,105 +50,33 @@
             margin-bottom: 20px;
         }
 
-        .tab-buttons {
-            display: flex;
+        .scanner-title {
+            text-align: center;
             margin-bottom: 20px;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 2px solid #e0e0e0;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 15px;
-            background: #f5f5f5;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
+            color: #333;
+            font-size: 1.5rem;
             font-weight: 600;
-            transition: all 0.3s ease;
         }
 
-        .tab-btn.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .tab-btn:hover:not(.active) {
-            background: #e0e0e0;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .camera-container {
-            text-align: center;
-        }
-
-        #camera-view {
-            width: 100%;
-            max-width: 400px;
-            height: 300px;
-            border: 3px dashed #ccc;
+        #reader {
             border-radius: 15px;
-            margin: 0 auto 20px;
-            background: #f9f9f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
             overflow: hidden;
+            margin: 0 auto 20px;
+            max-width: 100%;
         }
 
-        #camera-view video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 12px;
+        /* Custom styling for html5-qrcode elements */
+        #reader > div {
+            border-radius: 15px !important;
         }
 
-        .camera-placeholder {
-            color: #999;
-            font-size: 1.1rem;
+        #reader video {
+            border-radius: 15px !important;
         }
 
-        .upload-area {
-            border: 3px dashed #ccc;
-            border-radius: 15px;
-            padding: 40px;
+        .controls {
             text-align: center;
-            background: #f9f9f9;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .upload-area:hover {
-            border-color: #667eea;
-            background: #f0f4ff;
-        }
-
-        .upload-area.dragover {
-            border-color: #667eea;
-            background: #e8f0ff;
-        }
-
-        .upload-icon {
-            font-size: 3rem;
-            color: #ccc;
-            margin-bottom: 15px;
-        }
-
-        .upload-area:hover .upload-icon {
-            color: #667eea;
-        }
-
-        #file-input {
-            display: none;
+            margin: 20px 0;
         }
 
         .btn {
@@ -174,12 +102,18 @@
             transform: translateY(0);
         }
 
-        .btn-secondary {
-            background: #6c757d;
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        .btn-secondary:hover {
-            background: #5a6268;
+        .btn-stop {
+            background: #dc3545;
+        }
+
+        .btn-stop:hover {
+            background: #c82333;
         }
 
         .result-container {
@@ -214,8 +148,8 @@
         }
 
         .result-icon {
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
             background: #28a745;
             border-radius: 50%;
             display: flex;
@@ -223,46 +157,54 @@
             justify-content: center;
             color: white;
             font-weight: bold;
-            margin-right: 10px;
+            margin-right: 15px;
+            font-size: 1.2rem;
         }
 
         .result-content {
             background: #f8f9fa;
             border-radius: 10px;
-            padding: 15px;
+            padding: 20px;
             border-left: 4px solid #667eea;
             word-break: break-all;
             font-family: 'Courier New', monospace;
-            font-size: 0.95rem;
-            line-height: 1.5;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            min-height: 60px;
+        }
+
+        .result-actions {
+            text-align: center;
         }
 
         .copy-btn {
             background: #28a745;
-            font-size: 0.9rem;
-            padding: 8px 16px;
-            margin-top: 10px;
+            font-size: 0.95rem;
+            padding: 10px 20px;
         }
 
         .copy-btn:hover {
             background: #218838;
         }
 
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            border-left: 4px solid #dc3545;
+        .open-btn {
+            background: #007bff;
+            font-size: 0.95rem;
+            padding: 10px 20px;
+        }
+
+        .open-btn:hover {
+            background: #0056b3;
         }
 
         .status-message {
             text-align: center;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 10px;
             font-weight: 500;
+            display: none;
         }
 
         .status-success {
@@ -271,10 +213,39 @@
             border: 1px solid #c3e6cb;
         }
 
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
         .status-info {
             background: #cce7ff;
             color: #004085;
             border: 1px solid #99d3ff;
+        }
+
+        .instruction {
+            text-align: center;
+            color: #666;
+            margin: 20px 0;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .camera-selection {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .camera-select {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            font-size: 0.9rem;
+            max-width: 200px;
+            margin: 0 10px;
         }
 
         @media (max-width: 768px) {
@@ -290,10 +261,28 @@
                 padding: 20px;
             }
             
-            .tab-btn {
-                padding: 12px;
+            .result-content {
+                font-size: 0.9rem;
+                padding: 15px;
+            }
+            
+            .btn {
+                padding: 10px 20px;
                 font-size: 0.9rem;
             }
+        }
+
+        /* Hide default html5-qrcode styling */
+        #reader__dashboard_section {
+            display: none !important;
+        }
+
+        #reader__header_message {
+            display: none !important;
+        }
+
+        #reader__scan_region {
+            border-radius: 15px !important;
         }
     </style>
 </head>
@@ -301,42 +290,31 @@
     <div class="container">
         <div class="header">
             <h1>🔍 QR Code Scanner</h1>
-            <p>Scan QR codes dengan kamera atau upload gambar</p>
+            <p>Scan QR codes & Barcodes dengan kamera</p>
         </div>
 
         <div class="scanner-container">
-            <div class="tab-buttons">
-                <button class="tab-btn active" onclick="switchTab('camera')">📷 Scan dengan Kamera</button>
-                <button class="tab-btn" onclick="switchTab('upload')">📁 Upload Gambar</button>
+            <div class="scanner-title">📷 Live Camera Scanner</div>
+            
+            <div class="instruction">
+                Arahkan kamera ke QR Code atau Barcode untuk memindai
             </div>
 
-            <!-- Camera Tab -->
-            <div id="camera-tab" class="tab-content active">
-                <div class="camera-container">
-                    <div id="camera-view">
-                        <div class="camera-placeholder">
-                            Klik "Mulai Scanner" untuk mengaktifkan kamera
-                        </div>
-                    </div>
-                    <button id="start-camera" class="btn" onclick="startCamera()">Mulai Scanner</button>
-                    <button id="stop-camera" class="btn btn-secondary" onclick="stopCamera()" style="display: none;">Stop Scanner</button>
-                </div>
+            <div id="reader"></div>
+            
+            <div class="controls">
+                <button id="start-btn" class="btn" onclick="startScanning()">
+                    🚀 Mulai Scanner
+                </button>
+                <button id="stop-btn" class="btn btn-stop" onclick="stopScanning()" style="display: none;">
+                    ⏹️ Stop Scanner
+                </button>
             </div>
 
-            <!-- Upload Tab -->
-            <div id="upload-tab" class="tab-content">
-                <div class="upload-area" onclick="document.getElementById('file-input').click()">
-                    <div class="upload-icon">📷</div>
-                    <h3>Klik untuk upload gambar QR Code</h3>
-                    <p>atau drag & drop gambar di sini</p>
-                    <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">
-                        Format: JPG, JPEG, PNG, BMP
-                    </p>
-                </div>
-                <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(event)">
-                <div style="text-align: center; margin-top: 15px;">
-                    <button class="btn" onclick="pasteFromClipboard()">📋 Paste dari Clipboard</button>
-                </div>
+            <div class="camera-selection" id="camera-selection" style="display: none;">
+                <label for="camera-select">Pilih Kamera:</label>
+                <select id="camera-select" class="camera-select" onchange="switchCamera()">
+                </select>
             </div>
         </div>
 
@@ -344,154 +322,240 @@
         <div id="result-container" class="result-container">
             <div class="result-header">
                 <div class="result-icon">✓</div>
-                <h3>Hasil Scan QR Code:</h3>
+                <h3>Hasil Scan:</h3>
             </div>
             <div id="result-content" class="result-content"></div>
-            <button class="btn copy-btn" onclick="copyResult()">📋 Copy Hasil</button>
+            <div class="result-actions">
+                <button class="btn copy-btn" onclick="copyResult()">
+                    📋 Copy Text
+                </button>
+                <button class="btn open-btn" onclick="openResult()" id="open-btn" style="display: none;">
+                    🔗 Buka Link
+                </button>
+            </div>
         </div>
 
         <!-- Status Messages -->
-        <div id="status-message"></div>
+        <div id="status-message" class="status-message"></div>
     </div>
 
     <script>
-        let qrScanner = null;
-        let currentStream = null;
+        let html5QrcodeScanner = null;
+        let currentResult = '';
+        let cameras = [];
 
-        function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        // Success callback when QR code is scanned
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log('Scan berhasil:', decodedText, decodedResult);
             
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+            currentResult = decodedText;
+            showResult(decodedText);
+            showStatus('QR Code berhasil dipindai! ✅', 'success');
             
-            // Stop camera if switching away from camera tab
-            if (tabName !== 'camera') {
-                stopCamera();
-            }
+            // Play success sound (optional)
+            playBeep();
         }
 
-        async function startCamera() {
+        // Error callback (not critical, just for debugging)
+        function onScanFailure(error) {
+            // Console log for debugging, but don't show to user
+            // console.log('Scan error (normal):', error);
+        }
+
+        async function startScanning() {
             try {
-                const video = document.createElement('video');
-                video.setAttribute('playsinline', true);
+                showStatus('Memulai kamera...', 'info');
                 
-                const cameraView = document.getElementById('camera-view');
-                cameraView.innerHTML = '';
-                cameraView.appendChild(video);
+                // Get available cameras
+                const devices = await Html5Qrcode.getCameras();
+                cameras = devices;
                 
-                // Request camera permission
-                currentStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
-                
-                video.srcObject = currentStream;
-                video.play();
-                
-                // Initialize QR Scanner
-                qrScanner = new QrScanner(video, result => {
-                    showResult(result.data);
-                    showStatus('QR Code berhasil dipindai!', 'success');
-                });
-                
-                await qrScanner.start();
-                
-                document.getElementById('start-camera').style.display = 'none';
-                document.getElementById('stop-camera').style.display = 'inline-block';
-                
-                showStatus('Kamera aktif. Arahkan ke QR Code untuk memindai.', 'info');
-                
-            } catch (error) {
-                console.error('Error starting camera:', error);
-                showError('Gagal mengakses kamera. Pastikan izin kamera sudah diberikan.');
-            }
-        }
-
-        function stopCamera() {
-            if (qrScanner) {
-                qrScanner.stop();
-                qrScanner = null;
-            }
-            
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
-            
-            const cameraView = document.getElementById('camera-view');
-            cameraView.innerHTML = '<div class="camera-placeholder">Klik "Mulai Scanner" untuk mengaktifkan kamera</div>';
-            
-            document.getElementById('start-camera').style.display = 'inline-block';
-            document.getElementById('stop-camera').style.display = 'none';
-            
-            clearStatus();
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                scanImageFile(file);
-            }
-        }
-
-        async function scanImageFile(file) {
-            try {
-                showStatus('Memproses gambar...', 'info');
-                
-                const result = await QrScanner.scanImage(file);
-                showResult(result);
-                showStatus('QR Code berhasil dipindai dari gambar!', 'success');
-                
-            } catch (error) {
-                console.error('Error scanning image:', error);
-                showError('Tidak dapat menemukan QR Code dalam gambar. Pastikan gambar mengandung QR Code yang jelas.');
-            }
-        }
-
-        async function pasteFromClipboard() {
-            try {
-                const clipboardItems = await navigator.clipboard.read();
-                
-                for (const clipboardItem of clipboardItems) {
-                    for (const type of clipboardItem.types) {
-                        if (type.startsWith('image/')) {
-                            const blob = await clipboardItem.getType(type);
-                            scanImageFile(blob);
-                            return;
-                        }
+                if (devices && devices.length > 0) {
+                    // Populate camera selection dropdown
+                    populateCameraSelect(devices);
+                    
+                    // Configuration for scanning
+                    const config = {
+                        fps: 10,    // Scans per second
+                        qrbox: function(viewfinderWidth, viewfinderHeight) {
+                            // Square QR box with 70% of the smaller dimension
+                            let minEdgePercentage = 0.7;
+                            let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                            let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                            return {
+                                width: qrboxSize,
+                                height: qrboxSize
+                            };
+                        },
+                        rememberLastUsedCamera: true,
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                    };
+                    
+                    // Start scanning with the first camera (usually back camera)
+                    html5QrcodeScanner = new Html5Qrcode("reader");
+                    
+                    // Prefer back camera for mobile devices
+                    const cameraId = devices.find(device => 
+                        device.label.toLowerCase().includes('back') || 
+                        device.label.toLowerCase().includes('rear')
+                    )?.id || devices[0].id;
+                    
+                    await html5QrcodeScanner.start(
+                        cameraId,
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                    
+                    // Update UI
+                    document.getElementById('start-btn').style.display = 'none';
+                    document.getElementById('stop-btn').style.display = 'inline-block';
+                    
+                    if (devices.length > 1) {
+                        document.getElementById('camera-selection').style.display = 'block';
                     }
+                    
+                    showStatus('Kamera aktif. Arahkan ke QR Code untuk memindai! 📱', 'info');
+                    
+                } else {
+                    throw new Error('Tidak ada kamera yang ditemukan');
                 }
                 
-                showError('Tidak ada gambar ditemukan di clipboard.');
+            } catch (error) {
+                console.error('Error starting scanner:', error);
+                showStatus('❌ Gagal mengakses kamera. Pastikan izin kamera sudah diberikan dan browser mendukung kamera.', 'error');
+            }
+        }
+
+        async function stopScanning() {
+            try {
+                if (html5QrcodeScanner) {
+                    await html5QrcodeScanner.stop();
+                    html5QrcodeScanner = null;
+                }
+                
+                // Update UI
+                document.getElementById('start-btn').style.display = 'inline-block';
+                document.getElementById('stop-btn').style.display = 'none';
+                document.getElementById('camera-selection').style.display = 'none';
+                
+                clearStatus();
                 
             } catch (error) {
-                console.error('Error reading clipboard:', error);
-                showError('Gagal membaca clipboard. Pastikan ada gambar yang disalin.');
+                console.error('Error stopping scanner:', error);
+            }
+        }
+
+        function populateCameraSelect(devices) {
+            const select = document.getElementById('camera-select');
+            select.innerHTML = '';
+            
+            devices.forEach((device, index) => {
+                const option = document.createElement('option');
+                option.value = device.id;
+                option.text = device.label || `Kamera ${index + 1}`;
+                select.appendChild(option);
+            });
+        }
+
+        async function switchCamera() {
+            const select = document.getElementById('camera-select');
+            const selectedCameraId = select.value;
+            
+            if (html5QrcodeScanner && selectedCameraId) {
+                try {
+                    await html5QrcodeScanner.stop();
+                    
+                    const config = {
+                        fps: 10,
+                        qrbox: function(viewfinderWidth, viewfinderHeight) {
+                            let minEdgePercentage = 0.7;
+                            let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                            let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                            return {
+                                width: qrboxSize,
+                                height: qrboxSize
+                            };
+                        }
+                    };
+                    
+                    await html5QrcodeScanner.start(
+                        selectedCameraId,
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                    
+                    showStatus('Kamera berhasil diganti! 📷', 'success');
+                    
+                } catch (error) {
+                    console.error('Error switching camera:', error);
+                    showStatus('❌ Gagal mengganti kamera', 'error');
+                }
             }
         }
 
         function showResult(result) {
             const resultContainer = document.getElementById('result-container');
             const resultContent = document.getElementById('result-content');
+            const openBtn = document.getElementById('open-btn');
             
             resultContent.textContent = result;
             resultContainer.classList.add('show');
+            
+            // Show open button if result looks like a URL
+            if (isURL(result)) {
+                openBtn.style.display = 'inline-block';
+            } else {
+                openBtn.style.display = 'none';
+            }
             
             // Scroll to result
             resultContainer.scrollIntoView({ behavior: 'smooth' });
         }
 
         function copyResult() {
-            const resultContent = document.getElementById('result-content').textContent;
-            
-            navigator.clipboard.writeText(resultContent).then(() => {
-                showStatus('Hasil berhasil disalin ke clipboard!', 'success');
-            }).catch(error => {
-                console.error('Error copying to clipboard:', error);
-                showError('Gagal menyalin ke clipboard.');
-            });
+            if (currentResult) {
+                navigator.clipboard.writeText(currentResult).then(() => {
+                    showStatus('✅ Hasil berhasil disalin ke clipboard!', 'success');
+                }).catch(error => {
+                    console.error('Error copying to clipboard:', error);
+                    
+                    // Fallback method
+                    const textArea = document.createElement('textarea');
+                    textArea.value = currentResult;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    showStatus('✅ Hasil berhasil disalin!', 'success');
+                });
+            }
+        }
+
+        function openResult() {
+            if (currentResult && isURL(currentResult)) {
+                // Add https:// if missing
+                let url = currentResult;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                window.open(url, '_blank');
+            }
+        }
+
+        function isURL(string) {
+            try {
+                const patterns = [
+                    /^https?:\/\/.+/i,
+                    /^www\..+/i,
+                    /^.+\.(com|org|net|edu|gov|mil|int|co|uk|de|fr|jp|cn|ru)/i
+                ];
+                return patterns.some(pattern => pattern.test(string));
+            } catch (error) {
+                return false;
+            }
         }
 
         function showStatus(message, type) {
@@ -500,48 +564,51 @@
             statusDiv.textContent = message;
             statusDiv.style.display = 'block';
             
-            // Auto hide after 3 seconds
-            setTimeout(() => {
-                clearStatus();
-            }, 3000);
-        }
-
-        function showError(message) {
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.className = 'error-message';
-            statusDiv.textContent = message;
-            statusDiv.style.display = 'block';
+            // Auto hide success messages after 4 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    clearStatus();
+                }, 4000);
+            }
         }
 
         function clearStatus() {
-            document.getElementById('status-message').style.display = 'none';
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.style.display = 'none';
         }
 
-        // Drag and drop functionality
-        const uploadArea = document.querySelector('.upload-area');
-        
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                scanImageFile(files[0]);
+        function playBeep() {
+            // Create a simple beep sound
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (error) {
+                // Silently fail if audio context is not supported
             }
-        });
+        }
 
         // Cleanup when page is closed
         window.addEventListener('beforeunload', () => {
-            stopCamera();
+            stopScanning();
+        });
+
+        // Auto-request camera permission on page load (optional)
+        window.addEventListener('load', () => {
+            // You can uncomment this to auto-start scanning
+            // startScanning();
         });
     </script>
 </body>
