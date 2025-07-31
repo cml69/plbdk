@@ -49,7 +49,7 @@
         .slideshow-container {
             position: relative;
             overflow: hidden;
-            touch-action: pan-y;
+            /* Removed touch-action: pan-y to allow default touch behavior */
             cursor: grab;
         }
 
@@ -529,28 +529,16 @@
         function handleStart(e) {
             if (slides.length <= 1) return;
             
-            e.preventDefault();
-            isDragging = true;
-            
             const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
             const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
             
             touchStartX = clientX;
             touchStartY = clientY;
-            
-            const slidesWrapper = document.getElementById('slidesWrapper');
-            slidesWrapper.classList.add('no-transition');
-            
-            // Stop slideshow when user starts interacting
-            if (isSlideshow) {
-                stopSlideshow();
-            }
+            isDragging = false; // Will be set to true only for horizontal gestures
         }
 
         function handleMove(e) {
-            if (!isDragging || slides.length <= 1) return;
-            
-            e.preventDefault();
+            if (slides.length <= 1) return;
             
             const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
             const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
@@ -558,8 +546,35 @@
             const deltaX = clientX - touchStartX;
             const deltaY = clientY - touchStartY;
             
-            // Only handle horizontal swipes
-            if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+            // Determine if this is a horizontal or vertical gesture
+            if (!isDragging) {
+                const absDeltaX = Math.abs(deltaX);
+                const absDeltaY = Math.abs(deltaY);
+                
+                // If movement is more vertical than horizontal, allow normal scroll
+                if (absDeltaY > absDeltaX && absDeltaY > 10) {
+                    return; // Let browser handle vertical scroll
+                }
+                
+                // If movement is more horizontal, start horizontal sliding
+                if (absDeltaX > absDeltaY && absDeltaX > 10) {
+                    isDragging = true;
+                    e.preventDefault();
+                    
+                    const slidesWrapper = document.getElementById('slidesWrapper');
+                    slidesWrapper.classList.add('no-transition');
+                    
+                    // Stop slideshow when user starts horizontal swiping
+                    if (isSlideshow) {
+                        stopSlideshow();
+                    }
+                }
+                
+                return;
+            }
+            
+            // Now we're in horizontal sliding mode
+            e.preventDefault();
             
             const slidesWrapper = document.getElementById('slidesWrapper');
             const baseTransform = -currentSlide * 100;
@@ -599,6 +614,10 @@
 
         function handleClick(e) {
             if (slides.length <= 1) return;
+            
+            // Only handle click if there was no significant drag movement
+            const totalMovement = Math.abs(touchEndX - touchStartX);
+            if (totalMovement > 10) return; // Ignore clicks after drag
             
             const container = document.getElementById('slideshowContainer');
             const rect = container.getBoundingClientRect();
