@@ -634,7 +634,8 @@ td {
     .data-status {
         display: none;
     }
-    .scanner-container {
+}
+.scanner-container {
     background: white;
     border-radius: 20px;
     padding: 30px;
@@ -879,5 +880,4 @@ td {
         padding: 10px 20px;
         font-size: 0.9rem;
     }
-}
 }
