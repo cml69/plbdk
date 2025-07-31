@@ -227,7 +227,9 @@
             const resultContent = document.getElementById('result-content');
             const openBtn = document.getElementById('open-btn');
             
-            resultContent.textContent = result;
+            // Convert result to plain text with line breaks
+            const formattedResult = result.replace(/,/g, '\n').replace(/;/g, '\n');
+            resultContent.textContent = formattedResult;
             resultContainer.classList.add('show');
             
             // Show open button if result looks like a URL
