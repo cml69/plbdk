@@ -44,6 +44,83 @@
             text-align: center;
             padding: 20px;
         }
+
+        /* Swipe Container Styles */
+        .slideshow-container {
+            position: relative;
+            overflow: hidden;
+            touch-action: pan-y pinch-zoom;
+            user-select: none;
+        }
+
+        .slides-wrapper {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+        }
+
+        .slides-wrapper.no-transition {
+            transition: none;
+        }
+
+        .barcode-item {
+            flex: 0 0 100%;
+            width: 100%;
+        }
+
+        /* Swipe indicators */
+        .swipe-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .swipe-indicator.left {
+            left: 20px;
+        }
+
+        .swipe-indicator.right {
+            right: 20px;
+        }
+
+        .swipe-indicator.show {
+            opacity: 1;
+        }
+
+        /* Touch feedback */
+        .slideshow-container.swiping .slides-wrapper {
+            transition: none;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .swipe-indicator {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+            
+            .swipe-indicator.left {
+                left: 10px;
+            }
+            
+            .swipe-indicator.right {
+                right: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -120,6 +197,16 @@
         let isSlideshow = false;
         let animationType = 'slide';
         let isAnimating = false;
+
+        // Swipe functionality variables
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        let isSwiping = false;
+        let swipeThreshold = 50;
+        let swipeVelocityThreshold = 0.3;
+        let swipeStartTime = 0;
 
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
@@ -337,7 +424,9 @@
                     slideshowControls.classList.remove('active');
                 }
 
-                html += '<div class="slideshow-container">';
+                html += '<div class="slideshow-container" id="slideshowContainer">';
+                html += '<div class="swipe-indicator left" id="swipeLeft">‹</div>';
+                html += '<div class="swipe-indicator right" id="swipeRight">›</div>';
                 html += '<div class="slides-wrapper" id="slidesWrapper">';
                 
                 results.forEach((item, index) => {
@@ -403,7 +492,173 @@
                 });
                 
                 updateSlidePosition();
+                setupSwipeEvents();
             }
+        }
+
+        function setupSwipeEvents() {
+            const slideshowContainer = document.getElementById('slideshowContainer');
+            if (!slideshowContainer || slides.length <= 1) return;
+
+            // Touch events
+            slideshowContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+            slideshowContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            slideshowContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+            // Mouse events for desktop
+            slideshowContainer.addEventListener('mousedown', handleMouseStart);
+            slideshowContainer.addEventListener('mousemove', handleMouseMove);
+            slideshowContainer.addEventListener('mouseup', handleMouseEnd);
+            slideshowContainer.addEventListener('mouseleave', handleMouseEnd);
+
+            // Prevent context menu on long press
+            slideshowContainer.addEventListener('contextmenu', (e) => {
+                if (isSwiping) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        function handleTouchStart(e) {
+            if (slides.length <= 1) return;
+            
+            const touch = e.touches[0];
+            startSwipe(touch.clientX, touch.clientY);
+        }
+
+        function handleTouchMove(e) {
+            if (!isSwiping || slides.length <= 1) return;
+            
+            e.preventDefault();
+            const touch = e.touches[0];
+            updateSwipe(touch.clientX, touch.clientY);
+        }
+
+        function handleTouchEnd(e) {
+            if (!isSwiping || slides.length <= 1) return;
+            
+            endSwipe();
+        }
+
+        function handleMouseStart(e) {
+            if (slides.length <= 1) return;
+            
+            e.preventDefault();
+            startSwipe(e.clientX, e.clientY);
+        }
+
+        function handleMouseMove(e) {
+            if (!isSwiping || slides.length <= 1) return;
+            
+            e.preventDefault();
+            updateSwipe(e.clientX, e.clientY);
+        }
+
+        function handleMouseEnd(e) {
+            if (!isSwiping || slides.length <= 1) return;
+            
+            endSwipe();
+        }
+
+        function startSwipe(x, y) {
+            if (isAnimating) return;
+            
+            startX = x;
+            startY = y;
+            currentX = x;
+            currentY = y;
+            isSwiping = true;
+            swipeStartTime = Date.now();
+            
+            const slideshowContainer = document.getElementById('slideshowContainer');
+            const slidesWrapper = document.getElementById('slidesWrapper');
+            
+            if (slideshowContainer && slidesWrapper) {
+                slideshowContainer.classList.add('swiping');
+                slidesWrapper.classList.add('no-transition');
+            }
+        }
+
+        function updateSwipe(x, y) {
+            if (!isSwiping) return;
+            
+            currentX = x;
+            currentY = y;
+            
+            const deltaX = currentX - startX;
+            const deltaY = Math.abs(currentY - startY);
+            
+            // Only allow horizontal swiping if horizontal movement is greater than vertical
+            if (Math.abs(deltaX) > deltaY) {
+                const slidesWrapper = document.getElementById('slidesWrapper');
+                if (slidesWrapper && animationType === 'slide') {
+                    const baseTransform = -currentSlide * 100;
+                    const swipeOffset = (deltaX / window.innerWidth) * 100;
+                    slidesWrapper.style.transform = `translateX(${baseTransform + swipeOffset}%)`;
+                }
+                
+                // Show swipe indicators
+                const swipeLeft = document.getElementById('swipeLeft');
+                const swipeRight = document.getElementById('swipeRight');
+                
+                if (deltaX > 20 && currentSlide > 0) {
+                    swipeLeft.classList.add('show');
+                    swipeRight.classList.remove('show');
+                } else if (deltaX < -20 && currentSlide < slides.length - 1) {
+                    swipeRight.classList.add('show');
+                    swipeLeft.classList.remove('show');
+                } else {
+                    swipeLeft.classList.remove('show');
+                    swipeRight.classList.remove('show');
+                }
+            }
+        }
+
+        function endSwipe() {
+            if (!isSwiping) return;
+            
+            const deltaX = currentX - startX;
+            const deltaY = Math.abs(currentY - startY);
+            const swipeTime = Date.now() - swipeStartTime;
+            const velocity = Math.abs(deltaX) / swipeTime;
+            
+            isSwiping = false;
+            
+            const slideshowContainer = document.getElementById('slideshowContainer');
+            const slidesWrapper = document.getElementById('slidesWrapper');
+            const swipeLeft = document.getElementById('swipeLeft');
+            const swipeRight = document.getElementById('swipeRight');
+            
+            if (slideshowContainer) {
+                slideshowContainer.classList.remove('swiping');
+            }
+            
+            if (slidesWrapper) {
+                slidesWrapper.classList.remove('no-transition');
+            }
+            
+            if (swipeLeft) swipeLeft.classList.remove('show');
+            if (swipeRight) swipeRight.classList.remove('show');
+            
+            // Only process horizontal swipes
+            if (Math.abs(deltaX) > deltaY) {
+                const shouldSwipe = Math.abs(deltaX) > swipeThreshold || velocity > swipeVelocityThreshold;
+                
+                if (shouldSwipe) {
+                    if (deltaX > 0 && currentSlide > 0) {
+                        // Swipe right - go to previous slide
+                        prevSlide();
+                        return;
+                    } else if (deltaX < 0 && currentSlide < slides.length - 1) {
+                        // Swipe left - go to next slide
+                        nextSlide();
+                        return;
+                    }
+                }
+            }
+            
+            // Reset position if swipe wasn't successful
+            updateSlidePosition();
         }
 
         function updateSlidePosition() {
@@ -523,6 +778,7 @@
             slides = [];
             currentSlide = 0;
             isAnimating = false;
+            isSwiping = false;
         }
 
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
@@ -535,6 +791,17 @@
             if (e.ctrlKey && e.key === 'r') {
                 e.preventDefault();
                 loadExcelData();
+            }
+            
+            // Keyboard navigation for slides
+            if (slides.length > 1 && !e.ctrlKey && !e.altKey) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    prevSlide();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    nextSlide();
+                }
             }
         });
 
