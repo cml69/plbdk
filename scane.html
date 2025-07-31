@@ -5,341 +5,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code Scanner - Scan & Decode Online</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .scanner-container {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .scanner-title {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        #reader {
-            border-radius: 15px;
-            overflow: hidden;
-            margin: 0 auto 20px;
-            max-width: 100%;
-        }
-
-        /* Custom styling for html5-qrcode elements */
-        #reader > div {
-            border-radius: 15px !important;
-        }
-
-        #reader video {
-            border-radius: 15px !important;
-        }
-
-        .controls {
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 5px;
-        }
-
-        .btn:hover {
-            background: #5a6fd8;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-stop {
-            background: #dc3545;
-        }
-
-        .btn-stop:hover {
-            background: #c82333;
-        }
-
-        .result-container {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin-top: 20px;
-            display: none;
-        }
-
-        .result-container.show {
-            display: block;
-            animation: slideUp 0.3s ease;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .result-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .result-icon {
-            width: 30px;
-            height: 30px;
-            background: #28a745;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            margin-right: 15px;
-            font-size: 1.2rem;
-        }
-
-        .result-content {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            border-left: 4px solid #667eea;
-            word-break: break-all;
-            font-family: 'Courier New', monospace;
-            font-size: 1rem;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            min-height: 60px;
-        }
-
-        .result-actions {
-            text-align: center;
-        }
-
-        .copy-btn {
-            background: #28a745;
-            font-size: 0.95rem;
-            padding: 10px 20px;
-        }
-
-        .copy-btn:hover {
-            background: #218838;
-        }
-
-        .open-btn {
-            background: #007bff;
-            font-size: 0.95rem;
-            padding: 10px 20px;
-        }
-
-        .open-btn:hover {
-            background: #0056b3;
-        }
-
-        .status-message {
-            text-align: center;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 10px;
-            font-weight: 500;
-            display: none;
-        }
-
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .status-info {
-            background: #cce7ff;
-            color: #004085;
-            border: 1px solid #99d3ff;
-        }
-
-        .instruction {
-            text-align: center;
-            color: #666;
-            margin: 20px 0;
-            font-size: 1rem;
-            line-height: 1.5;
-        }
-
-        .camera-selection {
-            text-align: center;
-            margin: 15px 0;
-        }
-
-        .camera-select {
-            padding: 8px 15px;
-            border: 2px solid #ddd;
-            border-radius: 20px;
-            background: white;
-            font-size: 0.9rem;
-            max-width: 200px;
-            margin: 0 10px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .scanner-container {
-                padding: 20px;
-            }
-            
-            .result-content {
-                font-size: 0.9rem;
-                padding: 15px;
-            }
-            
-            .btn {
-                padding: 10px 20px;
-                font-size: 0.9rem;
-            }
-        }
-
-        /* Hide default html5-qrcode styling */
-        #reader__dashboard_section {
-            display: none !important;
-        }
-
-        #reader__header_message {
-            display: none !important;
-        }
-
-        #reader__scan_region {
-            border-radius: 15px !important;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
+        <!-- Menu Toggle Button -->
+        <button class="menu-toggle" onclick="toggleMenu()">☰ Menu</button>
+
+        <!-- Slide Menu -->
+        <div class="slide-menu" id="slideMenu">
+            <div class="menu-header">
+                <div class="menu-logo">QR</div>
+                <h3 class="menu-title">QR Code Tools</h3>
+                <p class="menu-subtitle">Scanner & Generator</p>
+            </div>
+            <nav class="menu-nav">
+                <a href="#" class="menu-item active">
+                    <div class="menu-icon barcode"></div>
+                    QR Scanner
+                </a>
+                <a href="#" class="menu-item">
+                    <div class="menu-icon box"></div>
+                    QR Generator
+                </a>
+                <a href="#" class="menu-item">
+                    <div class="menu-icon home"></div>
+                    Home
+                </a>
+            </nav>
+            <div class="menu-footer">
+                <p>© 2025 QR Tools</p>
+                <div class="donation-info">Made with ❤️</div>
+            </div>
+        </div>
+
+        <!-- Menu Overlay -->
+        <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+
         <div class="header">
             <h1>🔍 QR Code Scanner</h1>
             <p>Scan QR codes & Barcodes dengan kamera</p>
         </div>
 
-        <div class="scanner-container">
-            <div class="scanner-title">📷 Live Camera Scanner</div>
-            
-            <div class="instruction">
-                Arahkan kamera ke QR Code atau Barcode untuk memindai
+        <div class="content">
+            <div class="scanner-container">
+                <div class="scanner-title">📷 Live Camera Scanner</div>
+                
+                <div class="instruction">
+                    Arahkan kamera ke QR Code atau Barcode untuk memindai
+                </div>
+
+                <div id="reader"></div>
+                
+                <div class="controls">
+                    <button id="start-btn" class="btn" onclick="startScanning()">
+                        🚀 Mulai Scanner
+                    </button>
+                    <button id="stop-btn" class="btn btn-stop" onclick="stopScanning()" style="display: none;">
+                        ⏹️ Stop Scanner
+                    </button>
+                </div>
+
+                <div class="camera-selection" id="camera-selection" style="display: none;">
+                    <label for="camera-select">Pilih Kamera:</label>
+                    <select id="camera-select" class="camera-select" onchange="switchCamera()">
+                    </select>
+                </div>
             </div>
 
-            <div id="reader"></div>
-            
-            <div class="controls">
-                <button id="start-btn" class="btn" onclick="startScanning()">
-                    🚀 Mulai Scanner
-                </button>
-                <button id="stop-btn" class="btn btn-stop" onclick="stopScanning()" style="display: none;">
-                    ⏹️ Stop Scanner
-                </button>
+            <!-- Result Container -->
+            <div id="result-container" class="result-container">
+                <div class="result-header">
+                    <div class="result-icon">✓</div>
+                    <h3>Hasil Scan:</h3>
+                </div>
+                <div id="result-content" class="result-content"></div>
+                <div class="result-actions">
+                    <button class="btn copy-btn" onclick="copyResult()">
+                        📋 Copy Text
+                    </button>
+                    <button class="btn open-btn" onclick="openResult()" id="open-btn" style="display: none;">
+                        🔗 Buka Link
+                    </button>
+                </div>
             </div>
 
-            <div class="camera-selection" id="camera-selection" style="display: none;">
-                <label for="camera-select">Pilih Kamera:</label>
-                <select id="camera-select" class="camera-select" onchange="switchCamera()">
-                </select>
-            </div>
+            <!-- Status Messages -->
+            <div id="status-message" class="status-message"></div>
         </div>
-
-        <!-- Result Container -->
-        <div id="result-container" class="result-container">
-            <div class="result-header">
-                <div class="result-icon">✓</div>
-                <h3>Hasil Scan:</h3>
-            </div>
-            <div id="result-content" class="result-content"></div>
-            <div class="result-actions">
-                <button class="btn copy-btn" onclick="copyResult()">
-                    📋 Copy Text
-                </button>
-                <button class="btn open-btn" onclick="openResult()" id="open-btn" style="display: none;">
-                    🔗 Buka Link
-                </button>
-            </div>
-        </div>
-
-        <!-- Status Messages -->
-        <div id="status-message" class="status-message"></div>
     </div>
 
     <script>
+        // Menu Functions
+        function toggleMenu() {
+            const menu = document.getElementById('slideMenu');
+            const overlay = document.getElementById('menuOverlay');
+            const menuToggle = document.querySelector('.menu-toggle');
+            
+            menu.classList.toggle('open');
+            overlay.classList.toggle('open');
+            menuToggle.classList.toggle('hidden');
+        }
+
+        function closeMenu() {
+            const menu = document.getElementById('slideMenu');
+            const overlay = document.getElementById('menuOverlay');
+            const menuToggle = document.querySelector('.menu-toggle');
+            
+            menu.classList.remove('open');
+            overlay.classList.remove('open');
+            menuToggle.classList.remove('hidden');
+        }
+
+        // QR Scanner Functions
         let html5QrcodeScanner = null;
         let currentResult = '';
         let cameras = [];
