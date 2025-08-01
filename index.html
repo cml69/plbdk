@@ -119,6 +119,8 @@
         // Function to fetch product description from Klik Indomaret API
         async function fetchProductDescriptionFromAPI(plu) {
             try {
+                console.log(`🔍 Trying to fetch data for PLU: ${plu}`);
+                
                 // Create a proxy URL to bypass CORS
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.klikindomaret.com/xpress/${plu}`)}`;
                 
@@ -130,28 +132,69 @@
                 });
 
                 if (!response.ok) {
+                    console.error(`❌ HTTP error! status: ${response.status}`);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
                 const htmlContent = data.contents;
+                
+                console.log(`📄 HTML fetched, length: ${htmlContent.length}`);
 
-                // Extract the __NEXT_DATA__ script content
-                const scriptRegex = /<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s;
+                // Extract the __NEXT_DATA__ script content with more robust regex
+                const scriptRegex = /<script[^>]*id="__NEXT_DATA__"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/i;
                 const match = htmlContent.match(scriptRegex);
 
                 if (match && match[1]) {
-                    const jsonData = JSON.parse(match[1]);
-                    const description = jsonData?.props?.pageProps?.description;
+                    console.log(`🎯 Found __NEXT_DATA__ script`);
                     
-                    if (description) {
-                        return description;
+                    try {
+                        // Clean up the JSON string
+                        const jsonString = match[1].trim();
+                        const jsonData = JSON.parse(jsonString);
+                        
+                        console.log(`📊 JSON parsed successfully`);
+                        console.log(`🔍 Looking for description in:`, jsonData?.props?.pageProps);
+                        
+                        // Try multiple possible paths for description
+                        const description = jsonData?.props?.pageProps?.description ||
+                                          jsonData?.props?.pageProps?.title ||
+                                          jsonData?.props?.pageProps?.product?.description ||
+                                          jsonData?.props?.pageProps?.product?.name;
+                        
+                        if (description) {
+                            console.log(`✅ Description found: ${description}`);
+                            return description;
+                        } else {
+                            console.log(`❌ No description found in expected paths`);
+                            console.log(`📋 Available pageProps keys:`, Object.keys(jsonData?.props?.pageProps || {}));
+                        }
+                    } catch (parseError) {
+                        console.error(`❌ JSON parsing error:`, parseError);
+                        console.log(`📄 Raw JSON string:`, match[1].substring(0, 200) + '...');
+                    }
+                } else {
+                    console.log(`❌ __NEXT_DATA__ script not found in HTML`);
+                    
+                    // Debug: show first part of HTML to check structure
+                    const htmlStart = htmlContent.substring(0, 1000);
+                    console.log(`📄 HTML start:`, htmlStart);
+                    
+                    // Try to find any script tags
+                    const allScripts = htmlContent.match(/<script[^>]*>/gi);
+                    console.log(`📜 Found ${allScripts?.length || 0} script tags`);
+                    if (allScripts) {
+                        allScripts.forEach((script, index) => {
+                            if (script.includes('NEXT_DATA') || script.includes('application/json')) {
+                                console.log(`📜 Script ${index}:`, script);
+                            }
+                        });
                     }
                 }
 
                 return null;
             } catch (error) {
-                console.error(`Error fetching description for PLU ${plu}:`, error);
+                console.error(`❌ Error fetching description for PLU ${plu}:`, error);
                 return null;
             }
         }
