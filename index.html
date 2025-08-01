@@ -108,12 +108,74 @@
             ];
 
             for (let key of descriptionKeys) {
-                if (item[key]) {
+                if (item[key] && item[key].trim() !== '') {
                     return item[key];
                 }
             }
 
-            return '-';
+            return null; // Return null to indicate no description in Excel
+        }
+
+        // Function to fetch product description from Klik Indomaret API
+        async function fetchProductDescriptionFromAPI(plu) {
+            try {
+                // Create a proxy URL to bypass CORS
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.klikindomaret.com/xpress/${plu}`)}`;
+                
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const htmlContent = data.contents;
+
+                // Extract the __NEXT_DATA__ script content
+                const scriptRegex = /<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s;
+                const match = htmlContent.match(scriptRegex);
+
+                if (match && match[1]) {
+                    const jsonData = JSON.parse(match[1]);
+                    const description = jsonData?.props?.pageProps?.description;
+                    
+                    if (description) {
+                        return description;
+                    }
+                }
+
+                return null;
+            } catch (error) {
+                console.error(`Error fetching description for PLU ${plu}:`, error);
+                return null;
+            }
+        }
+
+        // Enhanced function to get description with API priority
+        async function getDescriptionWithAPI(item) {
+            const plu = item.PLU || item.plu;
+            
+            // First priority: try to fetch from API
+            if (plu) {
+                console.log(`Fetching description from API for PLU: ${plu}`);
+                const apiDescription = await fetchProductDescriptionFromAPI(plu);
+                if (apiDescription) {
+                    return `${apiDescription} (dari API)`;
+                }
+            }
+
+            // Second priority: try to get description from Excel data
+            const excelDescription = getDescription(item);
+            if (excelDescription) {
+                return `${excelDescription} (dari Excel)`;
+            }
+
+            return 'Deskripsi tidak tersedia';
         }
 
         function getBarcodeValues(item) {
@@ -243,7 +305,7 @@
             loadExcelData();
         });
 
-        function searchMultiplePLU() {
+        async function searchMultiplePLU() {
             const searchText = document.getElementById('searchInput').value.trim();
             const resultDiv = document.getElementById('result');
 
@@ -263,27 +325,27 @@
             const results = [];
             const notFound = [];
 
-            searchValues.forEach(searchValue => {
-                searchValue = searchValue.trim();
-                if (searchValue) {
+            for (const searchValue of searchValues) {
+                const trimmedValue = searchValue.trim();
+                if (trimmedValue) {
                     const foundItem = excelData.find(item => {
                         return Object.values(item).some(value => 
-                            String(value).toLowerCase() === searchValue.toLowerCase()
+                            String(value).toLowerCase() === trimmedValue.toLowerCase()
                         );
                     });
 
                     if (foundItem) {
                         results.push(foundItem);
                     } else {
-                        notFound.push(searchValue);
+                        notFound.push(trimmedValue);
                     }
                 }
-            });
+            }
 
-            displayResults(results, notFound);
+            await displayResults(results, notFound);
         }
 
-        function displayResults(results, notFound) {
+        async function displayResults(results, notFound) {
             const resultDiv = document.getElementById('result');
             const slideshowControls = document.getElementById('slideshowControls');
             
@@ -317,10 +379,11 @@
                 
                 html += '<div class="slides-wrapper" id="slidesWrapper">';
                 
-                results.forEach((item, index) => {
+                // First pass: create HTML structure with loading descriptions
+                for (let index = 0; index < results.length; index++) {
+                    const item = results[index];
                     const barcodeValues = getBarcodeValues(item);
                     const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
-                    const description = getDescription(item);
                     const plu = item.PLU || item.plu;
                     
                     html += `
@@ -342,13 +405,15 @@
                                 </tr>
                                 <tr>
                                     <th>Deskripsi</th>
-                                    <td>${description}</td>
+                                    <td id="description-${index}">
+                                        <div class="loading-description">🔄 Memuat dari API...</div>
+                                    </td>
                                 </tr>
                             </table>
                             <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
                         </div>
                     `;
-                });
+                }
                 
                 html += '</div></div>';
                 
@@ -365,6 +430,7 @@
             resultDiv.innerHTML = html;
 
             if (results.length > 0) {
+                // Generate barcodes
                 results.forEach((item, index) => {
                     const barcodeValues = getBarcodeValues(item);
                     try {
@@ -382,6 +448,24 @@
                 // Setup touch/swipe events
                 setupTouchEvents();
                 updateSlidePosition();
+
+                // Second pass: fetch descriptions asynchronously
+                for (let index = 0; index < results.length; index++) {
+                    const item = results[index];
+                    const descriptionElement = document.getElementById(`description-${index}`);
+                    
+                    try {
+                        const description = await getDescriptionWithAPI(item);
+                        if (descriptionElement) {
+                            descriptionElement.innerHTML = description;
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching description for index ${index}:`, error);
+                        if (descriptionElement) {
+                            descriptionElement.innerHTML = 'Error memuat deskripsi';
+                        }
+                    }
+                }
             }
         }
 
@@ -661,5 +745,22 @@
             }, 100);
         });
     </script>
+
+    <style>
+        .loading-description {
+            color: #666;
+            font-style: italic;
+            animation: pulse 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from {
+                opacity: 0.6;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 </body>
 </html>
