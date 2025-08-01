@@ -95,6 +95,9 @@
         let currentTransform = 0;
         let minSwipeDistance = 50;
 
+        // Cache untuk API responses
+        let apiCache = {};
+
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
         }
@@ -108,117 +111,12 @@
             ];
 
             for (let key of descriptionKeys) {
-                if (item[key] && item[key].trim() !== '') {
+                if (item[key]) {
                     return item[key];
                 }
             }
 
-            return null; // Return null to indicate no description in Excel
-        }
-
-        // Function to fetch product description from Klik Indomaret API
-        async function fetchProductDescriptionFromAPI(plu) {
-            try {
-                console.log(`🔍 Trying to fetch data for PLU: ${plu}`);
-                
-                // Create a proxy URL to bypass CORS
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.klikindomaret.com/xpress/${plu}`)}`;
-                
-                const response = await fetch(proxyUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    }
-                });
-
-                if (!response.ok) {
-                    console.error(`❌ HTTP error! status: ${response.status}`);
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                const htmlContent = data.contents;
-                
-                console.log(`📄 HTML fetched, length: ${htmlContent.length}`);
-
-                // Extract the __NEXT_DATA__ script content with more robust regex
-                const scriptRegex = /<script[^>]*id="__NEXT_DATA__"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/i;
-                const match = htmlContent.match(scriptRegex);
-
-                if (match && match[1]) {
-                    console.log(`🎯 Found __NEXT_DATA__ script`);
-                    
-                    try {
-                        // Clean up the JSON string
-                        const jsonString = match[1].trim();
-                        const jsonData = JSON.parse(jsonString);
-                        
-                        console.log(`📊 JSON parsed successfully`);
-                        console.log(`🔍 Looking for description in:`, jsonData?.props?.pageProps);
-                        
-                        // Try multiple possible paths for description
-                        const description = jsonData?.props?.pageProps?.description ||
-                                          jsonData?.props?.pageProps?.title ||
-                                          jsonData?.props?.pageProps?.product?.description ||
-                                          jsonData?.props?.pageProps?.product?.name;
-                        
-                        if (description) {
-                            console.log(`✅ Description found: ${description}`);
-                            return description;
-                        } else {
-                            console.log(`❌ No description found in expected paths`);
-                            console.log(`📋 Available pageProps keys:`, Object.keys(jsonData?.props?.pageProps || {}));
-                        }
-                    } catch (parseError) {
-                        console.error(`❌ JSON parsing error:`, parseError);
-                        console.log(`📄 Raw JSON string:`, match[1].substring(0, 200) + '...');
-                    }
-                } else {
-                    console.log(`❌ __NEXT_DATA__ script not found in HTML`);
-                    
-                    // Debug: show first part of HTML to check structure
-                    const htmlStart = htmlContent.substring(0, 1000);
-                    console.log(`📄 HTML start:`, htmlStart);
-                    
-                    // Try to find any script tags
-                    const allScripts = htmlContent.match(/<script[^>]*>/gi);
-                    console.log(`📜 Found ${allScripts?.length || 0} script tags`);
-                    if (allScripts) {
-                        allScripts.forEach((script, index) => {
-                            if (script.includes('NEXT_DATA') || script.includes('application/json')) {
-                                console.log(`📜 Script ${index}:`, script);
-                            }
-                        });
-                    }
-                }
-
-                return null;
-            } catch (error) {
-                console.error(`❌ Error fetching description for PLU ${plu}:`, error);
-                return null;
-            }
-        }
-
-        // Enhanced function to get description with API priority
-        async function getDescriptionWithAPI(item) {
-            const plu = item.PLU || item.plu;
-            
-            // First priority: try to fetch from API
-            if (plu) {
-                console.log(`Fetching description from API for PLU: ${plu}`);
-                const apiDescription = await fetchProductDescriptionFromAPI(plu);
-                if (apiDescription) {
-                    return `${apiDescription} (dari API)`;
-                }
-            }
-
-            // Second priority: try to get description from Excel data
-            const excelDescription = getDescription(item);
-            if (excelDescription) {
-                return `${excelDescription} (dari Excel)`;
-            }
-
-            return 'Deskripsi tidak tersedia';
+            return '-';
         }
 
         function getBarcodeValues(item) {
@@ -234,6 +132,70 @@
 
         function getProductImageUrl(plu) {
             return `https://cdn-klik.klikindomaret.com/klik-catalog/product/${plu}_1.jpg`;
+        }
+
+        // Fungsi baru untuk mengambil title dari API Klik Indomaret
+        async function getProductTitle(plu) {
+            // Cek cache terlebih dahulu
+            if (apiCache[plu]) {
+                return apiCache[plu];
+            }
+
+            try {
+                const response = await fetch(`https://www.klikindomaret.com/xpress/${plu}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const html = await response.text();
+                
+                // Extract JSON data dari script tag
+                const scriptMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s);
+                
+                if (scriptMatch) {
+                    const jsonData = JSON.parse(scriptMatch[1]);
+                    const title = jsonData?.props?.pageProps?.title;
+                    
+                    if (title) {
+                        // Simpan ke cache
+                        apiCache[plu] = title;
+                        return title;
+                    }
+                }
+                
+                throw new Error('Title tidak ditemukan dalam response');
+                
+            } catch (error) {
+                console.error(`Error fetching title for PLU ${plu}:`, error);
+                // Return null jika gagal, akan menggunakan deskripsi dari Excel
+                return null;
+            }
+        }
+
+        // Fungsi untuk mendapatkan deskripsi dengan prioritas API
+        async function getDescriptionWithAPI(item) {
+            const plu = item.PLU || item.plu;
+            
+            if (plu) {
+                try {
+                    const apiTitle = await getProductTitle(plu);
+                    if (apiTitle) {
+                        return apiTitle;
+                    }
+                } catch (error) {
+                    console.error(`API error for PLU ${plu}:`, error);
+                }
+            }
+            
+            // Fallback ke deskripsi dari Excel jika API gagal
+            return getDescription(item);
         }
 
         function createProductImage(plu, index) {
@@ -368,6 +330,9 @@
             const results = [];
             const notFound = [];
 
+            // Update status untuk menunjukkan proses pencarian API
+            resultDiv.innerHTML = '<div class="loading">Sedang mencari data dan mengambil informasi dari API...</div>';
+
             for (const searchValue of searchValues) {
                 const trimmedValue = searchValue.trim();
                 if (trimmedValue) {
@@ -422,14 +387,20 @@
                 
                 html += '<div class="slides-wrapper" id="slidesWrapper">';
                 
-                // First pass: create HTML structure with loading descriptions
+                // Update status untuk menunjukkan proses API
+                resultDiv.innerHTML = html + '<div class="loading">Mengambil deskripsi dari API...</div></div></div>';
+                
+                // Process setiap item secara async untuk mendapatkan deskripsi dari API
                 for (let index = 0; index < results.length; index++) {
                     const item = results[index];
                     const barcodeValues = getBarcodeValues(item);
                     const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
                     const plu = item.PLU || item.plu;
                     
-                    html += `
+                    // Ambil deskripsi dengan prioritas API
+                    const description = await getDescriptionWithAPI(item);
+                    
+                    const itemHtml = `
                         <div class="barcode-item" data-slide="${index}">
                             ${createProductImage(plu, index)}
                             <table>
@@ -448,34 +419,25 @@
                                 </tr>
                                 <tr>
                                     <th>Deskripsi</th>
-                                    <td id="description-${index}">
-                                        <div class="loading-description">🔄 Memuat dari API...</div>
-                                    </td>
+                                    <td>${description}</td>
                                 </tr>
                             </table>
                             <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
                         </div>
                     `;
-                }
-                
-                html += '</div></div>';
-                
-                slides = results;
-                currentSlide = 0;
-                updateSlideInfo();
-            } else if (notFound.length === 0) {
-                html += '<div class="result-summary error">Tidak ada PLU yang dicari!</div>';
-                slideshowControls.classList.remove('active');
-            } else {
-                slideshowControls.classList.remove('active');
-            }
-
-            resultDiv.innerHTML = html;
-
-            if (results.length > 0) {
-                // Generate barcodes
-                results.forEach((item, index) => {
-                    const barcodeValues = getBarcodeValues(item);
+                    
+                    // Update HTML secara incremental
+                    if (index === 0) {
+                        // Replace loading message dengan item pertama
+                        const slidesWrapper = document.getElementById('slidesWrapper');
+                        slidesWrapper.innerHTML = itemHtml;
+                    } else {
+                        // Append item selanjutnya
+                        const slidesWrapper = document.getElementById('slidesWrapper');
+                        slidesWrapper.innerHTML += itemHtml;
+                    }
+                    
+                    // Generate barcode untuk item yang baru ditambahkan
                     try {
                         JsBarcode(`.barcode-${barcodeValues.cleaned}-${index}`, barcodeValues.cleaned, {
                             format: "CODE128",
@@ -486,29 +448,24 @@
                     } catch (e) {
                         console.error('Error generating barcode:', e);
                     }
-                });
+                }
+                
+                html += '</div></div>';
+                
+                slides = results;
+                currentSlide = 0;
+                updateSlideInfo();
                 
                 // Setup touch/swipe events
                 setupTouchEvents();
                 updateSlidePosition();
-
-                // Second pass: fetch descriptions asynchronously
-                for (let index = 0; index < results.length; index++) {
-                    const item = results[index];
-                    const descriptionElement = document.getElementById(`description-${index}`);
-                    
-                    try {
-                        const description = await getDescriptionWithAPI(item);
-                        if (descriptionElement) {
-                            descriptionElement.innerHTML = description;
-                        }
-                    } catch (error) {
-                        console.error(`Error fetching description for index ${index}:`, error);
-                        if (descriptionElement) {
-                            descriptionElement.innerHTML = 'Error memuat deskripsi';
-                        }
-                    }
-                }
+            } else if (notFound.length === 0) {
+                html += '<div class="result-summary error">Tidak ada PLU yang dicari!</div>';
+                slideshowControls.classList.remove('active');
+                resultDiv.innerHTML = html;
+            } else {
+                slideshowControls.classList.remove('active');
+                resultDiv.innerHTML = html;
             }
         }
 
@@ -761,6 +718,8 @@
             slides = [];
             currentSlide = 0;
             isAnimating = false;
+            // Clear API cache jika diperlukan
+            // apiCache = {};
         }
 
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
@@ -788,22 +747,5 @@
             }, 100);
         });
     </script>
-
-    <style>
-        .loading-description {
-            color: #666;
-            font-style: italic;
-            animation: pulse 1.5s ease-in-out infinite alternate;
-        }
-
-        @keyframes pulse {
-            from {
-                opacity: 0.6;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-    </style>
 </body>
 </html>
