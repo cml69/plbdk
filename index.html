@@ -95,9 +95,6 @@
         let currentTransform = 0;
         let minSwipeDistance = 50;
 
-        // Cache untuk API responses
-        let apiCache = {};
-
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
         }
@@ -132,70 +129,6 @@
 
         function getProductImageUrl(plu) {
             return `https://cdn-klik.klikindomaret.com/klik-catalog/product/${plu}_1.jpg`;
-        }
-
-        // Fungsi baru untuk mengambil title dari API Klik Indomaret
-        async function getProductTitle(plu) {
-            // Cek cache terlebih dahulu
-            if (apiCache[plu]) {
-                return apiCache[plu];
-            }
-
-            try {
-                const response = await fetch(`https://www.klikindomaret.com/xpress/${plu}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const html = await response.text();
-                
-                // Extract JSON data dari script tag
-                const scriptMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s);
-                
-                if (scriptMatch) {
-                    const jsonData = JSON.parse(scriptMatch[1]);
-                    const title = jsonData?.props?.pageProps?.title;
-                    
-                    if (title) {
-                        // Simpan ke cache
-                        apiCache[plu] = title;
-                        return title;
-                    }
-                }
-                
-                throw new Error('Title tidak ditemukan dalam response');
-                
-            } catch (error) {
-                console.error(`Error fetching title for PLU ${plu}:`, error);
-                // Return null jika gagal, akan menggunakan deskripsi dari Excel
-                return null;
-            }
-        }
-
-        // Fungsi untuk mendapatkan deskripsi dengan prioritas API
-        async function getDescriptionWithAPI(item) {
-            const plu = item.PLU || item.plu;
-            
-            if (plu) {
-                try {
-                    const apiTitle = await getProductTitle(plu);
-                    if (apiTitle) {
-                        return apiTitle;
-                    }
-                } catch (error) {
-                    console.error(`API error for PLU ${plu}:`, error);
-                }
-            }
-            
-            // Fallback ke deskripsi dari Excel jika API gagal
-            return getDescription(item);
         }
 
         function createProductImage(plu, index) {
@@ -310,7 +243,7 @@
             loadExcelData();
         });
 
-        async function searchMultiplePLU() {
+        function searchMultiplePLU() {
             const searchText = document.getElementById('searchInput').value.trim();
             const resultDiv = document.getElementById('result');
 
@@ -330,30 +263,27 @@
             const results = [];
             const notFound = [];
 
-            // Update status untuk menunjukkan proses pencarian API
-            resultDiv.innerHTML = '<div class="loading">Sedang mencari data dan mengambil informasi dari API...</div>';
-
-            for (const searchValue of searchValues) {
-                const trimmedValue = searchValue.trim();
-                if (trimmedValue) {
+            searchValues.forEach(searchValue => {
+                searchValue = searchValue.trim();
+                if (searchValue) {
                     const foundItem = excelData.find(item => {
                         return Object.values(item).some(value => 
-                            String(value).toLowerCase() === trimmedValue.toLowerCase()
+                            String(value).toLowerCase() === searchValue.toLowerCase()
                         );
                     });
 
                     if (foundItem) {
                         results.push(foundItem);
                     } else {
-                        notFound.push(trimmedValue);
+                        notFound.push(searchValue);
                     }
                 }
-            }
+            });
 
-            await displayResults(results, notFound);
+            displayResults(results, notFound);
         }
 
-        async function displayResults(results, notFound) {
+        function displayResults(results, notFound) {
             const resultDiv = document.getElementById('result');
             const slideshowControls = document.getElementById('slideshowControls');
             
@@ -387,20 +317,13 @@
                 
                 html += '<div class="slides-wrapper" id="slidesWrapper">';
                 
-                // Update status untuk menunjukkan proses API
-                resultDiv.innerHTML = html + '<div class="loading">Mengambil deskripsi dari API...</div></div></div>';
-                
-                // Process setiap item secara async untuk mendapatkan deskripsi dari API
-                for (let index = 0; index < results.length; index++) {
-                    const item = results[index];
+                results.forEach((item, index) => {
                     const barcodeValues = getBarcodeValues(item);
                     const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
+                    const description = getDescription(item);
                     const plu = item.PLU || item.plu;
                     
-                    // Ambil deskripsi dengan prioritas API
-                    const description = await getDescriptionWithAPI(item);
-                    
-                    const itemHtml = `
+                    html += `
                         <div class="barcode-item" data-slide="${index}">
                             ${createProductImage(plu, index)}
                             <table>
@@ -425,19 +348,25 @@
                             <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
                         </div>
                     `;
-                    
-                    // Update HTML secara incremental
-                    if (index === 0) {
-                        // Replace loading message dengan item pertama
-                        const slidesWrapper = document.getElementById('slidesWrapper');
-                        slidesWrapper.innerHTML = itemHtml;
-                    } else {
-                        // Append item selanjutnya
-                        const slidesWrapper = document.getElementById('slidesWrapper');
-                        slidesWrapper.innerHTML += itemHtml;
-                    }
-                    
-                    // Generate barcode untuk item yang baru ditambahkan
+                });
+                
+                html += '</div></div>';
+                
+                slides = results;
+                currentSlide = 0;
+                updateSlideInfo();
+            } else if (notFound.length === 0) {
+                html += '<div class="result-summary error">Tidak ada PLU yang dicari!</div>';
+                slideshowControls.classList.remove('active');
+            } else {
+                slideshowControls.classList.remove('active');
+            }
+
+            resultDiv.innerHTML = html;
+
+            if (results.length > 0) {
+                results.forEach((item, index) => {
+                    const barcodeValues = getBarcodeValues(item);
                     try {
                         JsBarcode(`.barcode-${barcodeValues.cleaned}-${index}`, barcodeValues.cleaned, {
                             format: "CODE128",
@@ -448,24 +377,11 @@
                     } catch (e) {
                         console.error('Error generating barcode:', e);
                     }
-                }
-                
-                html += '</div></div>';
-                
-                slides = results;
-                currentSlide = 0;
-                updateSlideInfo();
+                });
                 
                 // Setup touch/swipe events
                 setupTouchEvents();
                 updateSlidePosition();
-            } else if (notFound.length === 0) {
-                html += '<div class="result-summary error">Tidak ada PLU yang dicari!</div>';
-                slideshowControls.classList.remove('active');
-                resultDiv.innerHTML = html;
-            } else {
-                slideshowControls.classList.remove('active');
-                resultDiv.innerHTML = html;
             }
         }
 
@@ -718,8 +634,6 @@
             slides = [];
             currentSlide = 0;
             isAnimating = false;
-            // Clear API cache jika diperlukan
-            // apiCache = {};
         }
 
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
