@@ -131,50 +131,6 @@
             return `https://cdn-klik.klikindomaret.com/klik-catalog/product/${plu}_1.jpg`;
         }
 
-        // Fungsi baru untuk mengambil deskripsi dari API Klik Indomaret
-        async function getProductDescriptionFromAPI(plu) {
-            try {
-                const apiUrl = `https://www.klikindomaret.com/_next/data/z48XasEzZYRKTbXpAgoWY/xpress/${plu}.json`;
-                const response = await fetch(apiUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // Mengambil deskripsi dari redirect URL
-                if (data.pageProps && data.pageProps.__N_REDIRECT) {
-                    const redirectText = data.pageProps.__N_REDIRECT;
-                    // Mengubah format URL menjadi nama produk yang lebih readable
-                    const productName = redirectText
-                        .split('-')
-                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(' ');
-                    
-                    return productName;
-                }
-                
-                return null;
-            } catch (error) {
-                console.warn(`Failed to fetch description from API for PLU ${plu}:`, error);
-                return null;
-            }
-        }
-
-        // Fungsi untuk mendapatkan deskripsi dengan prioritas API
-        async function getDescriptionWithAPI(item, plu) {
-            // Coba ambil dari API terlebih dahulu
-            const apiDescription = await getProductDescriptionFromAPI(plu);
-            
-            if (apiDescription) {
-                return apiDescription;
-            }
-            
-            // Jika API gagal, gunakan deskripsi dari Excel
-            return getDescription(item);
-        }
-
         function createProductImage(plu, index) {
             const imageUrl = getProductImageUrl(plu);
             return `
@@ -287,11 +243,11 @@
             loadExcelData();
         });
 
-        async function searchMultiplePLU() {
+        function searchMultiplePLU() {
             const searchText = document.getElementById('searchInput').value.trim();
             const resultDiv = document.getElementById('result');
 
-            resultDiv.innerHTML = '<div class="loading">Sedang mencari data dan mengambil deskripsi dari API...</div>';
+            resultDiv.innerHTML = '<div class="loading">Sedang mencari data...</div>';
 
             if (!excelData.length) {
                 resultDiv.innerHTML = '<div class="result-summary error">Data belum tersedia!</div>';
@@ -307,31 +263,22 @@
             const results = [];
             const notFound = [];
 
-            // Proses pencarian dengan async untuk mengambil deskripsi dari API
-            for (const searchValue of searchValues) {
-                const trimmedValue = searchValue.trim();
-                if (trimmedValue) {
+            searchValues.forEach(searchValue => {
+                searchValue = searchValue.trim();
+                if (searchValue) {
                     const foundItem = excelData.find(item => {
                         return Object.values(item).some(value => 
-                            String(value).toLowerCase() === trimmedValue.toLowerCase()
+                            String(value).toLowerCase() === searchValue.toLowerCase()
                         );
                     });
 
                     if (foundItem) {
-                        // Ambil deskripsi dari API atau fallback ke Excel
-                        const plu = foundItem.PLU || foundItem.plu;
-                        const description = await getDescriptionWithAPI(foundItem, plu);
-                        
-                        // Tambahkan deskripsi ke item
-                        results.push({
-                            ...foundItem,
-                            apiDescription: description
-                        });
+                        results.push(foundItem);
                     } else {
-                        notFound.push(trimmedValue);
+                        notFound.push(searchValue);
                     }
                 }
-            }
+            });
 
             displayResults(results, notFound);
         }
@@ -373,8 +320,7 @@
                 results.forEach((item, index) => {
                     const barcodeValues = getBarcodeValues(item);
                     const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
-                    // Gunakan deskripsi dari API jika ada, jika tidak gunakan dari Excel
-                    const description = item.apiDescription || getDescription(item);
+                    const description = getDescription(item);
                     const plu = item.PLU || item.plu;
                     
                     html += `
@@ -396,7 +342,7 @@
                                 </tr>
                                 <tr>
                                     <th>Deskripsi</th>
-                                    <td>${description} ${item.apiDescription ? '<span style="color: #4CAF50; font-size: 12px;">(API)</span>' : '<span style="color: #FF9800; font-size: 12px;">(Excel)</span>'}</td>
+                                    <td>${description}</td>
                                 </tr>
                             </table>
                             <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
