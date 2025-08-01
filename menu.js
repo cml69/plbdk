@@ -30,6 +30,14 @@ const MENU_CONFIG = {
             icon: "barcode",
             title: "Custom Barcode",
             subtitle: "(Soon)"
+        },
+        {
+            id: "community",
+            href: "https://chat.whatsapp.com/ENKOwJcYQTa8irIuybrxfc?mode=ac_t",
+            icon: "community",
+            title: "Join Komunitas",
+            subtitle: "WhatsApp Group",
+            external: true
         }
     ]
 };
@@ -87,10 +95,13 @@ function generateMenuHTML() {
             
             <nav class="menu-nav">
                 ${MENU_CONFIG.items.map(item => `
-                    <a href="${item.href}" class="menu-item ${currentPage === item.href ? 'active' : ''}">
+                    <a href="${item.href}" 
+                       class="menu-item ${currentPage === item.href ? 'active' : ''} ${item.external ? 'external-link' : ''}"
+                       ${item.external ? 'target="_blank" rel="noopener noreferrer"' : ''}>
                         <div class="menu-icon ${item.icon}"></div>
                         ${item.title}
                         ${item.subtitle ? `<br><small>${item.subtitle}</small>` : ''}
+                        ${item.external ? '<span class="external-indicator">↗</span>' : ''}
                     </a>
                 `).join('')}
             </nav>
@@ -122,7 +133,12 @@ function setupMenuEventListeners() {
         item.addEventListener('click', function(e) {
             // Don't close menu for current page link or disabled links
             if (!this.classList.contains('active') && this.getAttribute('href') !== '#') {
-                closeMenu();
+                // For external links, close menu after a short delay to allow navigation
+                if (this.classList.contains('external-link')) {
+                    setTimeout(() => closeMenu(), 100);
+                } else {
+                    closeMenu();
+                }
             }
         });
     });
