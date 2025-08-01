@@ -37,6 +37,9 @@
                 <button onclick="clearResults()">Bersihkan Hasil</button>
                 <button onclick="window.print()">Cetak Semua</button>
                 <button onclick="loadExcelData()" id="reloadBtn">🔄 Reload Data</button>
+                <label>
+                    <input type="checkbox" id="useApiNames" checked> Gunakan nama dari API
+                </label>
             </div>
         </div>
 
@@ -84,6 +87,7 @@
         let isSlideshow = false;
         let animationType = 'slide';
         let isAnimating = false;
+        let productNameCache = new Map(); // Cache untuk nama produk dari API
 
         // Touch/Swipe variables
         let touchStartX = 0;
@@ -97,6 +101,45 @@
 
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
+        }
+
+        // Fungsi untuk mengambil nama produk dari API
+        async function getProductNameFromAPI(plu) {
+            try {
+                // Cek cache terlebih dahulu
+                if (productNameCache.has(plu)) {
+                    return productNameCache.get(plu);
+                }
+
+                // Jika tidak ada di cache, fetch dari API
+                const response = await fetch(`https://klikindomaret.com/api/product/${plu}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Ambil nama produk dari response
+                const productName = data.productName || data.product?.productName || null;
+                
+                // Simpan ke cache
+                if (productName) {
+                    productNameCache.set(plu, productName);
+                }
+                
+                return productName;
+                
+            } catch (error) {
+                console.error(`Error fetching product name for PLU ${plu}:`, error);
+                return null;
+            }
         }
 
         function getDescription(item) {
@@ -114,6 +157,21 @@
             }
 
             return '-';
+        }
+
+        // Fungsi untuk mendapatkan deskripsi dengan opsi API
+        async function getDescriptionWithAPI(item, useApi = false) {
+            const plu = item.PLU || item.plu;
+            
+            if (useApi && plu) {
+                const apiProductName = await getProductNameFromAPI(plu);
+                if (apiProductName) {
+                    return apiProductName;
+                }
+            }
+            
+            // Fallback ke deskripsi dari Excel
+            return getDescription(item);
         }
 
         function getBarcodeValues(item) {
@@ -243,9 +301,10 @@
             loadExcelData();
         });
 
-        function searchMultiplePLU() {
+        async function searchMultiplePLU() {
             const searchText = document.getElementById('searchInput').value.trim();
             const resultDiv = document.getElementById('result');
+            const useApiNames = document.getElementById('useApiNames').checked;
 
             resultDiv.innerHTML = '<div class="loading">Sedang mencari data...</div>';
 
@@ -263,27 +322,32 @@
             const results = [];
             const notFound = [];
 
-            searchValues.forEach(searchValue => {
-                searchValue = searchValue.trim();
-                if (searchValue) {
+            // Update status untuk pencarian
+            if (useApiNames) {
+                resultDiv.innerHTML = '<div class="loading">Sedang mencari data dan mengambil nama produk dari API...</div>';
+            }
+
+            for (const searchValue of searchValues) {
+                const trimmedValue = searchValue.trim();
+                if (trimmedValue) {
                     const foundItem = excelData.find(item => {
                         return Object.values(item).some(value => 
-                            String(value).toLowerCase() === searchValue.toLowerCase()
+                            String(value).toLowerCase() === trimmedValue.toLowerCase()
                         );
                     });
 
                     if (foundItem) {
                         results.push(foundItem);
                     } else {
-                        notFound.push(searchValue);
+                        notFound.push(trimmedValue);
                     }
                 }
-            });
+            }
 
-            displayResults(results, notFound);
+            await displayResults(results, notFound, useApiNames);
         }
 
-        function displayResults(results, notFound) {
+        async function displayResults(results, notFound, useApiNames = false) {
             const resultDiv = document.getElementById('result');
             const slideshowControls = document.getElementById('slideshowControls');
             
@@ -317,11 +381,15 @@
                 
                 html += '<div class="slides-wrapper" id="slidesWrapper">';
                 
-                results.forEach((item, index) => {
+                // Process results dengan atau tanpa API
+                for (let index = 0; index < results.length; index++) {
+                    const item = results[index];
                     const barcodeValues = getBarcodeValues(item);
                     const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
-                    const description = getDescription(item);
                     const plu = item.PLU || item.plu;
+                    
+                    // Dapatkan deskripsi (dari API atau Excel)
+                    const description = await getDescriptionWithAPI(item, useApiNames);
                     
                     html += `
                         <div class="barcode-item" data-slide="${index}">
@@ -342,13 +410,13 @@
                                 </tr>
                                 <tr>
                                     <th>Deskripsi</th>
-                                    <td>${description}</td>
+                                    <td>${description} ${useApiNames ? '<span style="color: #007bff; font-size: 0.8em;">(API)</span>' : ''}</td>
                                 </tr>
                             </table>
                             <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
                         </div>
                     `;
-                });
+                }
                 
                 html += '</div></div>';
                 
@@ -634,6 +702,7 @@
             slides = [];
             currentSlide = 0;
             isAnimating = false;
+            productNameCache.clear(); // Clear cache saat clear results
         }
 
         document.getElementById('searchInput').addEventListener('keydown', function(e) {
