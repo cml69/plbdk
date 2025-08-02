@@ -1060,67 +1060,63 @@ td {
                 padding: 10px;
             }
         }
-/* EMAIL GENERATOR SPECIFIC CSS - ADD TO BOTTOM OF styles.css */
+/* EMAIL GENERATOR SIMPLE TABLE STYLE - ADD TO BOTTOM OF styles.css */
 
 /* Override existing styles for email generator */
 #result .email-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-    gap: 12px !important;
-    padding: 15px !important;
-    max-width: 1000px !important;
+    display: block !important;
+    padding: 20px !important;
+    max-width: 800px !important;
     margin: 0 auto !important;
-    background: transparent !important;
+    background: white !important;
+    border-radius: 8px !important;
 }
 
 #result .email-card {
-    background: white !important;
-    border: 1px solid #ddd !important;
-    border-radius: 8px !important;
-    padding: 15px !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #eee !important;
+    border-radius: 0 !important;
+    padding: 15px 0 !important;
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
     transition: all 0.2s ease !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    box-shadow: none !important;
     text-align: left !important;
-    width: auto !important;
+    width: 100% !important;
     flex-direction: row !important;
 }
 
+#result .email-card:last-child {
+    border-bottom: none !important;
+}
+
 #result .email-card:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
-    border-color: #2196F3 !important;
+    background: #f8f9fa !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border-color: #eee !important;
 }
 
 #result .email-number {
-    background: #2196F3 !important;
-    color: white !important;
-    width: 28px !important;
-    height: 28px !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-weight: bold !important;
-    font-size: 13px !important;
-    flex-shrink: 0 !important;
-    margin: 0 !important;
+    display: none !important;
 }
 
 #result .email-text {
     flex: 1 !important;
     font-family: 'Courier New', monospace !important;
-    font-size: 13px !important;
+    font-size: 16px !important;
     color: #333 !important;
     word-break: break-all !important;
-    line-height: 1.3 !important;
+    line-height: 1.4 !important;
     margin: 0 !important;
     padding: 0 !important;
     background: transparent !important;
     border: none !important;
     text-align: left !important;
+    font-weight: normal !important;
 }
 
 #result .email-actions {
@@ -1130,27 +1126,28 @@ td {
 }
 
 #result .copy-btn {
-    background: #4CAF50 !important;
-    color: white !important;
+    background: transparent !important;
+    color: #2196F3 !important;
     border: none !important;
-    padding: 8px 12px !important;
+    padding: 8px 16px !important;
     border-radius: 4px !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
+    font-size: 16px !important;
+    font-weight: normal !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     display: inline-flex !important;
     align-items: center !important;
     gap: 4px !important;
-    min-width: 60px !important;
+    min-width: auto !important;
     justify-content: center !important;
     margin: 0 !important;
     text-transform: none !important;
 }
 
 #result .copy-btn:hover {
-    background: #45a049 !important;
-    transform: scale(1.02) !important;
+    background: #f0f8ff !important;
+    color: #1976D2 !important;
+    transform: none !important;
 }
 
 #result .copy-btn:active {
@@ -1160,43 +1157,40 @@ td {
 /* Mobile specific overrides */
 @media (max-width: 768px) {
     #result .email-grid {
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
-        padding: 10px !important;
+        padding: 15px !important;
     }
     
     #result .email-card {
-        padding: 12px !important;
-        gap: 10px !important;
-    }
-    
-    #result .email-number {
-        width: 24px !important;
-        height: 24px !important;
-        font-size: 11px !important;
+        padding: 12px 0 !important;
+        gap: 15px !important;
     }
     
     #result .email-text {
-        font-size: 12px !important;
+        font-size: 14px !important;
     }
     
     #result .copy-btn {
-        padding: 6px 10px !important;
-        font-size: 11px !important;
-        min-width: 50px !important;
+        font-size: 14px !important;
+        padding: 6px 12px !important;
     }
 }
 
 @media (max-width: 480px) {
     #result .email-card {
         flex-direction: column !important;
-        text-align: center !important;
+        align-items: flex-start !important;
         gap: 8px !important;
-        padding: 10px !important;
+        padding: 15px 0 !important;
     }
     
     #result .email-text {
-        text-align: center !important;
-        font-size: 11px !important;
+        text-align: left !important;
+        font-size: 13px !important;
+        width: 100% !important;
+    }
+    
+    #result .email-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
     }
 }
