@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Generator - Valid Email Variations</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Email Generator - Valid Email Variations</h1>
+    <p>Masukkan email untuk meng cloning email</p>
+    
+    <form id="emailForm">
+        <label for="emailInput">Email asli:</label><br>
+        <input type="email" id="emailInput" placeholder="protonmail.com" required><br><br>
+        <button type="submit">Generate Variations</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <!-- Notifikasi transparan -->
+    <div id="notification" style="position: fixed; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: white; padding: 10px 20px; border-radius: 5px; display: none; z-index: 1000;">
+        Berhasil di copy!
+    </div>
+
+    <script>
+        document.getElementById('emailForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const emailInput = document.getElementById('emailInput').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!emailInput) {
+                resultDiv.innerHTML = '<p>Silakan masukkan email yang valid!</p>';
+                return;
+            }
+            
+            // Memisahkan username dan domain
+            const emailParts = emailInput.split('@');
+            if (emailParts.length !== 2) {
+                resultDiv.innerHTML = '<p>Format email tidak valid!</p>';
+                return;
+            }
+            
+            const username = emailParts[0];
+            const domain = emailParts[1];
+            
+            if (username.length < 2) {
+                resultDiv.innerHTML = '<p>Username email terlalu pendek untuk generate variasi!</p>';
+                return;
+            }
+            
+            // Generate semua variasi dengan menambahkan "-" di berbagai posisi
+            const variations = generateEmailVariations(username, domain);
+            
+            let resultHTML = `
+                <h3>Valid Email Variations</h3>
+                <p><strong>Number of possible aliases:</strong> ${variations.length}</p>
+            `;
+            
+            variations.forEach((email, index) => {
+                resultHTML += `
+                    <div style="margin: 10px 0; padding: 5px; border: 1px solid #ccc;">
+                        <span>${index + 1}. ${email}</span>
+                        <button id="btn-${index}" onclick="copyToClipboard('${email}', ${index})" style="margin-left: 10px;">Copy</button>
+                        <span id="check-${index}" style="display: none; color: green; margin-left: 5px;">✅</span>
+                    </div>
+                `;
+            });
+            
+            resultDiv.innerHTML = resultHTML;
+        });
+        
+        function generateEmailVariations(username, domain) {
+            const variations = [];
+            const usernameArray = username.split('');
+            
+            // Generate semua kombinasi dengan menambahkan "-" di berbagai posisi
+            // Mulai dari 1 karena kita tidak ingin "-" di awal
+            for (let i = 1; i < usernameArray.length; i++) {
+                generateCombinations(usernameArray, domain, i, [], variations);
+            }
+            
+            // Tambahkan email asli sebagai variasi pertama
+            variations.unshift(username + '@' + domain);
+            
+            // Hapus duplikat dan return
+            return [...new Set(variations)];
+        }
+        
+        function generateCombinations(usernameArray, domain, maxDashes, currentPositions, variations) {
+            if (currentPositions.length === maxDashes) {
+                // Buat email dengan posisi dash yang sudah ditentukan
+                let modifiedUsername = '';
+                for (let i = 0; i < usernameArray.length; i++) {
+                    modifiedUsername += usernameArray[i];
+                    if (currentPositions.includes(i + 1) && i < usernameArray.length - 1) {
+                        modifiedUsername += '-';
+                    }
+                }
+                variations.push(modifiedUsername + '@' + domain);
+                return;
+            }
+            
+            // Tentukan posisi awal untuk iterasi
+            const startPos = currentPositions.length === 0 ? 1 : Math.max(...currentPositions) + 1;
+            
+            // Generate kombinasi rekursif
+            for (let pos = startPos; pos < usernameArray.length; pos++) {
+                generateCombinations(usernameArray, domain, maxDashes, [...currentPositions, pos], variations);
+            }
+        }
+        
+        function copyToClipboard(text, index) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Sembunyikan semua tanda ✅ yang lain
+                const allChecks = document.querySelectorAll('[id^="check-"]');
+                allChecks.forEach(check => check.style.display = 'none');
+                
+                // Tampilkan tanda ✅ untuk item yang baru di-copy
+                const checkmark = document.getElementById('check-' + index);
+                checkmark.style.display = 'inline';
+                
+                // Tampilkan notifikasi
+                showNotification();
+                
+            }).catch(function(err) {
+                // Fallback untuk browser yang tidak support clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                // Sembunyikan semua tanda ✅ yang lain
+                const allChecks = document.querySelectorAll('[id^="check-"]');
+                allChecks.forEach(check => check.style.display = 'none');
+                
+                // Tampilkan tanda ✅ untuk item yang baru di-copy
+                const checkmark = document.getElementById('check-' + index);
+                checkmark.style.display = 'inline';
+                
+                // Tampilkan notifikasi
+                showNotification();
+            });
+        }
+        
+        function showNotification() {
+            const notification = document.getElementById('notification');
+            notification.style.display = 'block';
+            
+            // Hilangkan notifikasi setelah 2 detik
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
