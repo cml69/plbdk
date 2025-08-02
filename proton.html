@@ -8,6 +8,7 @@
     <script src="menu.js"></script>
     <script src="footer.js"></script>
 </head>
+</head>
 <body>
     
     <!-- Main Container -->
@@ -88,8 +89,10 @@
             variations.forEach((email, index) => {
                 resultHTML += `
                     <div class="email-card">
-                        <div class="email-number">${index + 1}</div>
-                        <div class="email-text">${email}</div>
+                        <div class="email-left">
+                            <div class="email-number">${index + 1}.</div>
+                            <div class="email-text">${email}</div>
+                        </div>
                         <div class="email-actions">
                             <button id="btn-${index}" onclick="copyToClipboard('${email}', ${index})" class="copy-btn">
                                 Copy <span id="check-${index}" style="display: none;">✅</span>

@@ -1060,7 +1060,7 @@ td {
                 padding: 10px;
             }
         }
-/* EMAIL GENERATOR SIMPLE TABLE STYLE - ADD TO BOTTOM OF styles.css */
+/* EMAIL GENERATOR CLEAN TABLE STYLE - ADD TO BOTTOM OF styles.css */
 
 /* Override existing styles for email generator */
 #result .email-grid {
@@ -1077,7 +1077,7 @@ td {
     border: none !important;
     border-bottom: 1px solid #eee !important;
     border-radius: 0 !important;
-    padding: 15px 0 !important;
+    padding: 20px 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -1101,7 +1101,19 @@ td {
 }
 
 #result .email-number {
-    display: none !important;
+    background: transparent !important;
+    color: #666 !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    display: inline !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: normal !important;
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
+    margin-right: 15px !important;
+    min-width: 25px !important;
 }
 
 #result .email-text {
@@ -1119,10 +1131,17 @@ td {
     font-weight: normal !important;
 }
 
+#result .email-left {
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 !important;
+}
+
 #result .email-actions {
     flex-shrink: 0 !important;
     display: flex !important;
     align-items: center !important;
+    justify-content: flex-end !important;
 }
 
 #result .copy-btn {
@@ -1161,8 +1180,14 @@ td {
     }
     
     #result .email-card {
-        padding: 12px 0 !important;
+        padding: 15px 0 !important;
         gap: 15px !important;
+    }
+    
+    #result .email-number {
+        font-size: 14px !important;
+        margin-right: 10px !important;
+        min-width: 20px !important;
     }
     
     #result .email-text {
@@ -1177,20 +1202,21 @@ td {
 
 @media (max-width: 480px) {
     #result .email-card {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 8px !important;
-        padding: 15px 0 !important;
+        padding: 12px 0 !important;
+        gap: 10px !important;
+    }
+    
+    #result .email-number {
+        font-size: 13px !important;
+        margin-right: 8px !important;
     }
     
     #result .email-text {
-        text-align: left !important;
         font-size: 13px !important;
-        width: 100% !important;
     }
     
-    #result .email-actions {
-        width: 100% !important;
-        justify-content: flex-end !important;
+    #result .copy-btn {
+        font-size: 13px !important;
+        padding: 5px 10px !important;
     }
 }
