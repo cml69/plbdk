@@ -13,7 +13,8 @@
     <!-- Main Container -->
     <div class="container">
         <div class="header">
-            <h1>Proton mail Generator</h1>
+            <h1>Email Generator - Valid Email Variations</h1>
+            <p>Generate semua variasi email dengan tanda "-" di berbagai posisi</p>
         </div>
         
         <div class="content">
@@ -21,12 +22,13 @@
                 <form id="emailForm">
                     <div class="input-group">
                         <label for="emailInput">Email asli:</label>
-                        <input type="email" id="emailInput" placeholder="proton" required>
+                        <input type="email" id="emailInput" placeholder="contoh: yol@gmail.com" required>
                     </div>
                     <div class="format-info">
                         <h3>Format Hasil</h3>
                         <p>Sistem akan membuat variasi dengan menambahkan tanda "-" di berbagai posisi dalam username email.</p>
-                        </div>
+                        <p>Contoh: <code>yol@gmail.com</code> → <code>y-ol@gmail.com</code>, <code>yo-l@gmail.com</code>, dll.</p>
+                    </div>
                     <button type="submit" class="generate-btn">Generate Variations</button>
                 </form>
             </div>
@@ -78,17 +80,21 @@
                 <div class="result-container" style="display: block;">
                     <div class="result-summary">
                         <h3>Valid Email Variations</h3>
-                        <p><strong>Number of possible aliases:</strong> ${variations.length}</p>
+                        <p><strong>Total variations:</strong> ${variations.length}</p>
                     </div>
-                    <div class="barcode-display">
+                    <div class="email-grid">
             `;
             
             variations.forEach((email, index) => {
                 resultHTML += `
-                    <div class="barcode-item">
-                        <span>${index + 1}. ${email}</span>
-                        <button id="btn-${index}" onclick="copyToClipboard('${email}', ${index})" class="qr-copy-btn">Copy</button>
-                        <span id="check-${index}" style="display: none; color: green; margin-left: 5px;">✅</span>
+                    <div class="email-card">
+                        <div class="email-number">${index + 1}</div>
+                        <div class="email-text">${email}</div>
+                        <div class="email-actions">
+                            <button id="btn-${index}" onclick="copyToClipboard('${email}', ${index})" class="copy-btn">
+                                Copy <span id="check-${index}" style="display: none;">✅</span>
+                            </button>
+                        </div>
                     </div>
                 `;
             });
