@@ -95,146 +95,11 @@
         let currentTransform = 0;
         let minSwipeDistance = 50;
 
-        // Cache untuk menyimpan deskripsi yang sudah diambil dari Klik Indomaret
-        let klikDescriptionCache = new Map();
-
         function cleanBarcode(barcode) {
             return String(barcode).replace(/\D/g, '');
         }
 
-        // Fungsi untuk mengambil deskripsi dari Klik Indomaret
-        async function getKlikIndomaretDescription(plu) {
-            // Cek cache dulu
-            if (klikDescriptionCache.has(plu)) {
-                return klikDescriptionCache.get(plu);
-            }
-
-            try {
-                const url = `https://www.klikindomaret.com/xpress/${plu}`;
-                
-                // Menggunakan service proxy untuk mengatasi CORS
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                
-                const response = await fetch(proxyUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // Parse HTML response
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(data.contents, 'text/html');
-                
-                // Cari title dari berbagai sumber
-                let title = null;
-                
-                // Method 1: Cari dalam script tag __NEXT_DATA__
-                const scripts = doc.querySelectorAll('script');
-                for (let script of scripts) {
-                    if (script.textContent.includes('__NEXT_DATA__')) {
-                        try {
-                            const jsonMatch = script.textContent.match(/__NEXT_DATA__\s*=\s*({.*?});/);
-                            if (jsonMatch) {
-                                const nextData = JSON.parse(jsonMatch[1]);
-                                title = nextData?.props?.pageProps?.title;
-                                if (title) break;
-                            }
-                        } catch (e) {
-                            console.log('Error parsing __NEXT_DATA__:', e);
-                        }
-                    }
-                }
-                
-                // Method 2: Meta tag fallback
-                if (!title) {
-                    const metaTitle = doc.querySelector('meta[property="og:title"]');
-                    if (metaTitle) {
-                        title = metaTitle.getAttribute('content');
-                    }
-                }
-                
-                // Method 3: H1 fallback
-                if (!title) {
-                    const h1 = doc.querySelector('h1');
-                    if (h1) {
-                        title = h1.textContent.trim();
-                    }
-                }
-                
-                // Bersihkan title (hapus kode PLU dan "| Klik Indomaret")
-                if (title) {
-                    title = title
-                        .replace(/ - \d{8}/, '') // Hapus " - 12345678"
-                        .replace(/ \| Klik Indomaret/, '') // Hapus " | Klik Indomaret"
-                        .trim();
-                }
-                
-                // Cache hasil
-                if (title) {
-                    klikDescriptionCache.set(plu, title);
-                }
-                
-                return title;
-                
-            } catch (error) {
-                console.log(`Error fetching description for PLU ${plu}:`, error);
-                return null;
-            }
-        }
-
-        // Fungsi untuk update deskripsi secara batch
-        async function updateDescriptionsFromKlik(results) {
-            const updateStatus = document.getElementById('updateStatus');
-            const updateBtn = document.querySelector('.update-btn');
-            
-            if (updateBtn) updateBtn.disabled = true;
-            
-            updateStatus.innerHTML = '<div style="background: #fff3cd; padding: 10px; border-radius: 5px; color: #856404; margin: 10px 0;">🔄 Mengupdate deskripsi dari Klik Indomaret...</div>';
-            
-            for (let i = 0; i < results.length; i++) {
-                const item = results[i];
-                const plu = item.PLU || item.plu;
-                
-                if (plu) {
-                    updateStatus.innerHTML = `<div style="background: #fff3cd; padding: 10px; border-radius: 5px; color: #856404; margin: 10px 0;">📦 [${i+1}/${results.length}] Getting description for PLU: ${plu}</div>`;
-                    
-                    const klikDescription = await getKlikIndomaretDescription(plu);
-                    
-                    if (klikDescription) {
-                        console.log(`✅ Updated PLU ${plu}: ${klikDescription}`);
-                        
-                        // Update tampilan
-                        const descriptionCell = document.querySelector(`[data-plu="${plu}"] .description-cell`);
-                        if (descriptionCell) {
-                            descriptionCell.textContent = klikDescription;
-                            descriptionCell.style.background = '#e7f5e7';
-                            descriptionCell.innerHTML += '<div style="font-size: 0.8em; color: #666; font-style: italic; margin-top: 3px;">📍 Dari Klik Indomaret</div>';
-                        }
-                        
-                        updateStatus.innerHTML = `<div style="background: #d4edda; padding: 10px; border-radius: 5px; color: #155724; margin: 10px 0;">✅ Updated PLU ${plu}: ${klikDescription}</div>`;
-                    } else {
-                        console.log(`❌ No description found for PLU ${plu}`);
-                        updateStatus.innerHTML = `<div style="background: #f8d7da; padding: 10px; border-radius: 5px; color: #721c24; margin: 10px 0;">❌ No description found for PLU ${plu}</div>`;
-                    }
-                    
-                    // Delay untuk menghindari rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-            }
-            
-            updateStatus.innerHTML = '<div style="background: #d4edda; padding: 10px; border-radius: 5px; color: #155724; margin: 10px 0;">✅ Selesai update deskripsi dari Klik Indomaret</div>';
-            if (updateBtn) updateBtn.disabled = false;
-        }
-
         function getDescription(item) {
-            // Jika ada deskripsi dari Klik Indomaret (sudah di-cache), gunakan itu
-            const plu = item.PLU || item.plu;
-            if (plu && klikDescriptionCache.has(plu)) {
-                return klikDescriptionCache.get(plu);
-            }
-            
-            // Fallback ke deskripsi dari Excel
             const descriptionKeys = [
                 'DESKRIPSI', 'Deskripsi', 'deskripsi', 
                 'DESCRIPTION', 'Description', 'description',
@@ -437,16 +302,6 @@
             }
 
             if (results.length > 0) {
-                // Tambahkan tombol update deskripsi
-                html += `
-                    <div class="no-print" style="background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #007bff;">
-                        <button onclick="updateDescriptionsFromKlik(slides)" class="update-btn" style="background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; font-weight: bold;">
-                            🔄 Update Deskripsi dari Klik Indomaret
-                        </button>
-                        <div id="updateStatus"></div>
-                    </div>
-                `;
-                
                 if (results.length > 1) {
                     slideshowControls.classList.add('active');
                     html += '<div class="swipe-hint">💡 Geser kanan/kiri untuk ganti barcode</div>';
@@ -467,10 +322,9 @@
                     const showOriginal = barcodeValues.original !== barcodeValues.cleaned;
                     const description = getDescription(item);
                     const plu = item.PLU || item.plu;
-                    const isFromKlik = klikDescriptionCache.has(plu);
                     
                     html += `
-                        <div class="barcode-item" data-slide="${index}" data-plu="${plu}">
+                        <div class="barcode-item" data-slide="${index}">
                             ${createProductImage(plu, index)}
                             <table>
                                 <tr>
@@ -488,10 +342,7 @@
                                 </tr>
                                 <tr>
                                     <th>Deskripsi</th>
-                                    <td class="description-cell" ${isFromKlik ? 'style="background: #e7f5e7;"' : ''}>
-                                        ${description}
-                                        ${isFromKlik ? '<div style="font-size: 0.8em; color: #666; font-style: italic; margin-top: 3px;">📍 Dari Klik Indomaret</div>' : ''}
-                                    </td>
+                                    <td>${description}</td>
                                 </tr>
                             </table>
                             <svg class="barcode-${barcodeValues.cleaned}-${index}"></svg>
@@ -808,19 +659,6 @@
                     }
                 });
             }, 100);
-        });
-
-        // Tambahan untuk handle update button style hover
-        document.addEventListener('mouseover', function(e) {
-            if (e.target.classList.contains('update-btn') && !e.target.disabled) {
-                e.target.style.background = 'linear-gradient(135deg, #0056b3, #004085)';
-            }
-        });
-
-        document.addEventListener('mouseout', function(e) {
-            if (e.target.classList.contains('update-btn') && !e.target.disabled) {
-                e.target.style.background = 'linear-gradient(135deg, #007bff, #0056b3)';
-            }
         });
     </script>
 </body>
