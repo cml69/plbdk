@@ -5,25 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Generator - Valid Email Variations</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="menu.js"></script>
+    <script src="footer.js"></script>
 </head>
 <body>
-    <h1>Email Generator - Valid Email Variations</h1>
-    <p>Masukkan email untuk meng cloning email</p>
     
-    <form id="emailForm">
-        <label for="emailInput">Email asli:</label><br>
-        <input type="email" id="emailInput" placeholder="protonmail.com" required><br><br>
-        <button type="submit">Generate Variations</button>
-    </form>
-    
-    <div id="result"></div>
+    <!-- Main Container -->
+    <div class="container">
+        <div class="header">
+            <h1>Email Generator - Valid Email Variations</h1>
+            <p>Generate semua variasi email dengan tanda "-" di berbagai posisi</p>
+        </div>
+        
+        <div class="content">
+            <div class="form-container">
+                <form id="emailForm">
+                    <div class="input-group">
+                        <label for="emailInput">Email asli:</label>
+                        <input type="email" id="emailInput" placeholder="contoh: yol@gmail.com" required>
+                    </div>
+                    <div class="format-info">
+                        <h3>Format Hasil</h3>
+                        <p>Sistem akan membuat variasi dengan menambahkan tanda "-" di berbagai posisi dalam username email.</p>
+                        </div>
+                    <button type="submit" class="generate-btn">Generate Variations</button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="result"></div>
+    </div>
     
     <!-- Notifikasi transparan -->
-    <div id="notification" style="position: fixed; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: white; padding: 10px 20px; border-radius: 5px; display: none; z-index: 1000;">
+    <div id="notification" class="qr-status-message qr-status-success">
         Berhasil di copy!
     </div>
+    
+    <!-- Footer -->
+    <div id="footer-container"></div>
 
     <script>
+        // Email generator functionality
         document.getElementById('emailForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -31,14 +53,14 @@
             const resultDiv = document.getElementById('result');
             
             if (!emailInput) {
-                resultDiv.innerHTML = '<p>Silakan masukkan email yang valid!</p>';
+                resultDiv.innerHTML = '<div class="error">Silakan masukkan email yang valid!</div>';
                 return;
             }
             
             // Memisahkan username dan domain
             const emailParts = emailInput.split('@');
             if (emailParts.length !== 2) {
-                resultDiv.innerHTML = '<p>Format email tidak valid!</p>';
+                resultDiv.innerHTML = '<div class="error">Format email tidak valid!</div>';
                 return;
             }
             
@@ -46,7 +68,7 @@
             const domain = emailParts[1];
             
             if (username.length < 2) {
-                resultDiv.innerHTML = '<p>Username email terlalu pendek untuk generate variasi!</p>';
+                resultDiv.innerHTML = '<div class="error">Username email terlalu pendek untuk generate variasi!</div>';
                 return;
             }
             
@@ -54,19 +76,28 @@
             const variations = generateEmailVariations(username, domain);
             
             let resultHTML = `
-                <h3>Valid Email Variations</h3>
-                <p><strong>Number of possible aliases:</strong> ${variations.length}</p>
+                <div class="result-container" style="display: block;">
+                    <div class="result-summary">
+                        <h3>Valid Email Variations</h3>
+                        <p><strong>Number of possible aliases:</strong> ${variations.length}</p>
+                    </div>
+                    <div class="barcode-display">
             `;
             
             variations.forEach((email, index) => {
                 resultHTML += `
-                    <div style="margin: 10px 0; padding: 5px; border: 1px solid #ccc;">
+                    <div class="barcode-item">
                         <span>${index + 1}. ${email}</span>
-                        <button id="btn-${index}" onclick="copyToClipboard('${email}', ${index})" style="margin-left: 10px;">Copy</button>
+                        <button id="btn-${index}" onclick="copyToClipboard('${email}', ${index})" class="qr-copy-btn">Copy</button>
                         <span id="check-${index}" style="display: none; color: green; margin-left: 5px;">✅</span>
                     </div>
                 `;
             });
+            
+            resultHTML += `
+                    </div>
+                </div>
+            `;
             
             resultDiv.innerHTML = resultHTML;
         });
@@ -149,6 +180,10 @@
         function showNotification() {
             const notification = document.getElementById('notification');
             notification.style.display = 'block';
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.zIndex = '1000';
             
             // Hilangkan notifikasi setelah 2 detik
             setTimeout(() => {
