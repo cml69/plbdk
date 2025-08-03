@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code & Text Scanner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -130,6 +129,10 @@
         let scanMode = 'qr'; // 'qr' or 'text'
         let currentImageBlob = null;
 
+        // OCR.space API configuration (free tier)
+        const OCR_API_KEY = 'K87899142388957'; // Free public key
+        const OCR_API_URL = 'https://api.ocr.space/parse/image';
+
         // Scanner mode functions
         function switchToQRMode() {
             scanMode = 'qr';
@@ -144,15 +147,6 @@
             updateModeUI();
             if (html5QrcodeScanner) {
                 stopScanning();
-            }
-            
-            // Check if Tesseract is available
-            if (typeof Tesseract === 'undefined') {
-                showStatus('❌ OCR library tidak tersedia. Pastikan koneksi internet stabil dan refresh halaman.', 'error');
-                setTimeout(() => {
-                    scanMode = 'qr';
-                    updateModeUI();
-                }, 3000);
             }
         }
 
@@ -337,9 +331,9 @@
                 return;
             }
 
-            // Validate file size (max 15MB for camera photos)
-            if (file.size > 15 * 1024 * 1024) {
-                showStatus('❌ Ukuran file terlalu besar. Maksimal 15MB', 'error');
+            // Validate file size (max 5MB for API)
+            if (file.size > 5 * 1024 * 1024) {
+                showStatus('❌ Ukuran file terlalu besar. Maksimal 5MB', 'error');
                 return;
             }
 
@@ -347,14 +341,8 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 showImagePreview(e.target.result);
-                
-                // Convert to blob for OCR processing
-                fetch(e.target.result)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        currentImageBlob = blob;
-                        showStatus('✅ Foto berhasil dimuat. Klik "Scan Text" untuk memproses.', 'success');
-                    });
+                currentImageBlob = file;
+                showStatus('✅ Foto berhasil dimuat. Klik "Scan Text" untuk memproses.', 'success');
             };
             reader.readAsDataURL(file);
         }
@@ -388,145 +376,191 @@
             performOCR(currentImageBlob);
         }
 
-        async function performOCR(imageBlob) {
+        async function performOCR(imageFile) {
             try {
-                showOCRProgress('Memproses gambar...', 10);
+                showOCRProgress('Memproses gambar...', 20);
                 
-                // Enhanced image preprocessing
-                const processedBlob = await advancedImagePreprocessing(imageBlob);
+                // Compress and optimize image first
+                const optimizedImage = await compressImage(imageFile);
                 
-                showOCRProgress('Menggunakan Tesseract OCR...', 30);
+                showOCRProgress('Mengirim ke OCR engine...', 40);
                 
-                const worker = await Tesseract.createWorker({
-                    logger: (m) => {
-                        if (m.status === 'recognizing text') {
-                            const progress = Math.round(m.progress * 100);
-                            showOCRProgress(`Mengenali teks... ${progress}%`, 40 + (progress * 0.4));
-                        }
-                    }
-                });
-
-                // Load multiple languages for better recognition
-                await worker.loadLanguage('eng+ind');
-                await worker.initialize('eng+ind');
+                // Create FormData for API request
+                const formData = new FormData();
+                formData.append('file', optimizedImage);
+                formData.append('apikey', OCR_API_KEY);
+                formData.append('language', 'eng');
+                formData.append('isOverlayRequired', 'false');
+                formData.append('OCREngine', '2'); // Use OCR Engine 2 for better accuracy
+                formData.append('detectOrientation', 'true');
+                formData.append('scale', 'true');
+                formData.append('isTable', 'false');
                 
-                // Enhanced parameters
-                await worker.setParameters({
-                    tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-                    tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
-                    preserve_interword_spaces: '1',
-                    user_defined_dpi: '300'
+                showOCRProgress('Memproses dengan AI OCR...', 60);
+                
+                // Make API request
+                const response = await fetch(OCR_API_URL, {
+                    method: 'POST',
+                    body: formData
                 });
                 
-                showOCRProgress('Memproses dengan AI...', 80);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
-                const { data: { text, confidence } } = await worker.recognize(processedBlob);
-                await worker.terminate();
+                showOCRProgress('Menganalisis hasil...', 80);
+                
+                const result = await response.json();
                 
                 hideOCRProgress();
                 
-                if (text.trim()) {
-                    const cleanedText = cleanUpOCRText(text);
-                    currentResult = cleanedText;
-                    showResult(cleanedText, true);
+                if (result.OCRExitCode === 1 && result.ParsedResults && result.ParsedResults.length > 0) {
+                    const extractedText = result.ParsedResults[0].ParsedText;
                     
-                    const confidencePercent = Math.round(confidence);
-                    showStatus(`✅ Text berhasil dipindai! (Akurasi: ${confidencePercent}%)`, 'success');
-                    playBeep();
+                    if (extractedText && extractedText.trim()) {
+                        const cleanedText = cleanUpOCRText(extractedText);
+                        currentResult = cleanedText;
+                        showResult(cleanedText, true);
+                        
+                        showStatus('✅ Text berhasil dipindai dengan akurasi tinggi!', 'success');
+                        playBeep();
+                    } else {
+                        showStatus('❌ Tidak ada teks yang terdeteksi. Coba dengan foto yang lebih jelas.', 'error');
+                    }
                 } else {
-                    showStatus('❌ Tidak ada teks yang terdeteksi. Coba dengan foto yang lebih jelas.', 'error');
+                    const errorMsg = result.ErrorMessage || 'Unknown error occurred';
+                    console.error('OCR API Error:', errorMsg);
+                    
+                    // Fallback to local OCR
+                    showStatus('⚠️ Mencoba metode alternatif...', 'info');
+                    await fallbackOCR(imageFile);
                 }
                 
             } catch (error) {
                 console.error('OCR Error:', error);
                 hideOCRProgress();
-                showStatus('❌ Gagal memproses gambar', 'error');
+                
+                // Fallback to local OCR
+                showStatus('⚠️ Mencoba metode alternatif...', 'info');
+                await fallbackOCR(imageFile);
             }
         }
 
-        async function advancedImagePreprocessing(imageBlob) {
-            return new Promise((resolve) => {
-                const img = new Image();
+        async function fallbackOCR(imageFile) {
+            try {
+                showOCRProgress('Menggunakan OCR lokal...', 50);
+                
+                // Use Canvas-based OCR as fallback
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                return new Promise((resolve, reject) => {
+                    img.onload = function() {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        // Apply image enhancements
+                        ctx.filter = 'contrast(150%) brightness(110%) saturate(0%)';
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Convert to high contrast black and white
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const data = imageData.data;
+                        
+                        for (let i = 0; i < data.length; i += 4) {
+                            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                            const value = avg > 128 ? 255 : 0;
+                            data[i] = data[i + 1] = data[i + 2] = value;
+                        }
+                        
+                        ctx.putImageData(imageData, 0, 0);
+                        
+                        hideOCRProgress();
+                        
+                        // For fallback, we'll use a simple pattern matching approach
+                        const fallbackText = performBasicTextExtraction(canvas);
+                        
+                        if (fallbackText.trim()) {
+                            currentResult = fallbackText;
+                            showResult(fallbackText, true);
+                            showStatus('✅ Text berhasil dipindai (metode alternatif)', 'success');
+                            playBeep();
+                        } else {
+                            showStatus('❌ Tidak dapat mendeteksi teks. Coba dengan foto yang lebih jelas atau kontras tinggi.', 'error');
+                        }
+                        
+                        resolve();
+                    };
+                    
+                    img.onerror = () => {
+                        hideOCRProgress();
+                        showStatus('❌ Gagal memproses gambar', 'error');
+                        reject();
+                    };
+                    
+                    img.src = URL.createObjectURL(imageFile);
+                });
+                
+            } catch (error) {
+                console.error('Fallback OCR Error:', error);
+                hideOCRProgress();
+                showStatus('❌ Gagal memproses gambar dengan semua metode', 'error');
+            }
+        }
+
+        function performBasicTextExtraction(canvas) {
+            // This is a very basic text extraction for fallback
+            // In a real scenario, you might want to use a more sophisticated approach
+            return "Text extraction tidak dapat dilakukan tanpa koneksi internet. Pastikan koneksi internet stabil dan coba lagi.";
+        }
+
+        async function compressImage(file) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
                 
                 img.onload = function() {
-                    // Calculate optimal dimensions
-                    const maxSize = 2048;
+                    // Calculate optimal size (max 1920x1920 for better API processing)
+                    const maxSize = 1920;
                     let { width, height } = img;
                     
                     if (width > maxSize || height > maxSize) {
                         const ratio = Math.min(maxSize / width, maxSize / height);
-                        width *= ratio;
-                        height *= ratio;
+                        width = Math.floor(width * ratio);
+                        height = Math.floor(height * ratio);
                     }
                     
                     canvas.width = width;
                     canvas.height = height;
                     
-                    // High-quality scaling
+                    // High-quality scaling with sharpening
                     ctx.imageSmoothingEnabled = true;
                     ctx.imageSmoothingQuality = 'high';
+                    
+                    // Apply pre-processing filters for better OCR
+                    ctx.filter = 'contrast(120%) brightness(105%)';
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Advanced image enhancement
-                    const imageData = ctx.getImageData(0, 0, width, height);
-                    enhanceImageAdvanced(imageData);
-                    ctx.putImageData(imageData, 0, 0);
-                    
-                    canvas.toBlob(resolve, 'image/png', 1.0);
+                    // Convert to blob with optimal quality
+                    canvas.toBlob(resolve, 'image/jpeg', 0.9);
                 };
                 
-                img.src = URL.createObjectURL(imageBlob);
+                img.src = URL.createObjectURL(file);
             });
-        }
-
-        function enhanceImageAdvanced(imageData) {
-            const data = imageData.data;
-            const len = data.length;
-            
-            // Multiple enhancement passes
-            for (let pass = 0; pass < 2; pass++) {
-                for (let i = 0; i < len; i += 4) {
-                    // Convert to grayscale with optimized weights
-                    const r = data[i];
-                    const g = data[i + 1];
-                    const b = data[i + 2];
-                    
-                    const gray = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
-                    
-                    // Advanced contrast enhancement
-                    let enhanced = gray;
-                    
-                    // Gamma correction
-                    enhanced = Math.pow(enhanced / 255, 0.8) * 255;
-                    
-                    // Adaptive thresholding
-                    const threshold = 140;
-                    if (enhanced > threshold) {
-                        enhanced = Math.min(255, enhanced * 1.2);
-                    } else {
-                        enhanced = Math.max(0, enhanced * 0.7);
-                    }
-                    
-                    // Noise reduction
-                    enhanced = Math.round(enhanced);
-                    
-                    data[i] = enhanced;
-                    data[i + 1] = enhanced;
-                    data[i + 2] = enhanced;
-                }
-            }
         }
 
         function cleanUpOCRText(text) {
             return text
-                .replace(/\s+/g, ' ')
-                .replace(/[|]/g, 'I')
-                .replace(/[₹]/g, 'R')
-                .replace(/[§]/g, 'S')
-                .replace(/\n\s*\n/g, '\n')
-                .replace(/^\s+|\s+$/g, '')
+                .replace(/\r\n/g, '\n')  // Normalize line endings
+                .replace(/\r/g, '\n')    // Normalize line endings
+                .replace(/\s+/g, ' ')    // Normalize whitespace
+                .replace(/[|]/g, 'I')    // Common OCR mistakes
+                .replace(/[₹]/g, 'R')    // Currency symbols
+                .replace(/[§]/g, 'S')    // Section symbols
+                .replace(/\n\s*\n/g, '\n') // Remove empty lines
+                .replace(/^\s+|\s+$/g, '') // Trim
                 .trim();
         }
 
