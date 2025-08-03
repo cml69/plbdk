@@ -589,6 +589,18 @@
                 .trim();
         }
 
+        function formatTextForDisplay(text) {
+            // Break long words and add proper spacing
+            return text
+                .replace(/(.{50})/g, '$1\n') // Break long lines every 50 chars
+                .replace(/([A-Z0-9]{20,})/g, function(match) {
+                    // Break long uppercase/number sequences
+                    return match.replace(/(.{10})/g, '$1 ');
+                })
+                .replace(/\s+/g, ' ') // Clean up extra spaces
+                .trim();
+        }
+
         function showOCRProgress(text, progress) {
             const progressDiv = document.getElementById('ocr-progress');
             const progressText = document.getElementById('progress-text');
@@ -612,8 +624,8 @@
             // Format result based on type
             let formattedResult;
             if (isText) {
-                // For OCR text, preserve formatting
-                formattedResult = result;
+                // For OCR text, apply smart formatting
+                formattedResult = formatTextForDisplay(result);
             } else {
                 // For QR codes, format as before
                 formattedResult = result.replace(/,/g, '\n').replace(/;/g, '\n');
@@ -621,6 +633,14 @@
             
             resultContent.textContent = formattedResult;
             resultContainer.classList.add('show');
+            
+            // Add CSS styles to prevent text overflow
+            resultContent.style.wordWrap = 'break-word';
+            resultContent.style.wordBreak = 'break-all';
+            resultContent.style.whiteSpace = 'pre-wrap';
+            resultContent.style.overflowWrap = 'break-word';
+            resultContent.style.maxWidth = '100%';
+            resultContent.style.overflow = 'hidden';
             
             // Show appropriate buttons
             if (isText) {
