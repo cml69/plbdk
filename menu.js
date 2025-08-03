@@ -21,7 +21,7 @@ const MENU_CONFIG = {
         {
             id: "Scan-qr",
             href: "scane.html",
-            icon: "box",
+            icon: "qr-scan",
             title: "Scan QR Via Web"
         },
         {
