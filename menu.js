@@ -25,6 +25,12 @@ const MENU_CONFIG = {
             title: "Scan QR Via Web"
         },
         {
+            id: "Mail-generate",
+            href: "proton.html",
+            icon: "mail",
+            title: "Mail Generator"
+        },
+        {
             id: "custom-barcode",
             href: "#",
             icon: "barcode",
