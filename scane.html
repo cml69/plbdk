@@ -3,27 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner</title>
+    <title>QR Code & Text Scanner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="menu-container"></div>
     <div class="container">
         <div class="header">
-            <h1>🔍 QR Code Scanner</h1>
-            <p>Scan QR codes & Barcodes dengan kamera</p>
+            <h1>🔍 QR Code & Text Scanner</h1>
+            <p>Scan QR codes, Barcodes & Extract Text dengan kamera</p>
         </div>
 
         <div class="content">
+            <!-- Scanner Mode Selection -->
+            <div class="input-group">
+                <div class="scanner-controls">
+                    <button id="qr-mode-btn" class="qr-btn" onclick="switchToQRMode()">
+                        📱 Scan QR Code
+                    </button>
+                    <button id="text-mode-btn" class="qr-btn" onclick="switchToTextMode()">
+                        📄 Scan Text (OCR)
+                    </button>
+                </div>
+            </div>
+
             <div class="scanner-container">
-                <div class="scanner-title">📷 Live Camera Scanner</div>
+                <div class="scanner-title" id="scanner-title">📷 Live Camera Scanner</div>
                 
-                <div class="qr-instruction">
+                <div class="qr-instruction" id="scanner-instruction">
                     Arahkan kamera ke QR Code atau Barcode untuk memindai
                 </div>
 
                 <div id="reader"></div>
+                
+                <!-- OCR Progress Bar -->
+                <div id="ocr-progress" class="data-status loading" style="display: none;">
+                    <div id="progress-text">Processing...</div>
+                    <div style="background: #ddd; border-radius: 10px; overflow: hidden; margin-top: 10px;">
+                        <div id="progress-bar" style="height: 6px; background: #667eea; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                </div>
                 
                 <div class="scanner-controls">
                     <button id="start-btn" class="qr-btn" onclick="startScanning()">
@@ -31,6 +52,9 @@
                     </button>
                     <button id="stop-btn" class="qr-btn qr-btn-stop" onclick="stopScanning()" style="display: none;">
                         ⏹️ Stop Scanner
+                    </button>
+                    <button id="capture-btn" class="qr-btn" onclick="captureImage()" style="display: none;">
+                        📸 Capture & Scan Text
                     </button>
                 </div>
 
@@ -52,6 +76,9 @@
                     <button class="qr-open-btn" onclick="openResult()" id="open-btn" style="display: none;">
                         🔗 Buka Link
                     </button>
+                    <button class="qr-copy-btn" onclick="downloadText()" id="download-btn" style="display: none;">
+                        💾 Download Text
+                    </button>
                 </div>
             </div>
 
@@ -63,12 +90,60 @@
     <script src="menu.js"></script>
     <script src="footer.js"></script>
     <script>
-        // QR Scanner Functions
+        // Global variables
         let html5QrcodeScanner = null;
         let currentResult = '';
         let cameras = [];
+        let scanMode = 'qr'; // 'qr' or 'text'
+        let videoElement = null;
+        let canvasElement = null;
 
-        // Success callback when QR code is scanned
+        // Scanner mode functions
+        function switchToQRMode() {
+            scanMode = 'qr';
+            updateModeUI();
+            if (html5QrcodeScanner) {
+                stopScanning();
+            }
+        }
+
+        function switchToTextMode() {
+            scanMode = 'text';
+            updateModeUI();
+            if (html5QrcodeScanner) {
+                stopScanning();
+            }
+        }
+
+        function updateModeUI() {
+            const qrBtn = document.getElementById('qr-mode-btn');
+            const textBtn = document.getElementById('text-mode-btn');
+            const title = document.getElementById('scanner-title');
+            const instruction = document.getElementById('scanner-instruction');
+            const captureBtn = document.getElementById('capture-btn');
+
+            if (scanMode === 'qr') {
+                qrBtn.style.background = '#667eea';
+                qrBtn.style.color = 'white';
+                textBtn.style.background = '#f0f0f0';
+                textBtn.style.color = '#333';
+                
+                title.textContent = '📱 QR Code Scanner';
+                instruction.textContent = 'Arahkan kamera ke QR Code atau Barcode untuk memindai';
+                captureBtn.style.display = 'none';
+            } else {
+                textBtn.style.background = '#667eea';
+                textBtn.style.color = 'white';
+                qrBtn.style.background = '#f0f0f0';
+                qrBtn.style.color = '#333';
+                
+                title.textContent = '📄 Text Scanner (OCR)';
+                instruction.textContent = 'Arahkan kamera ke teks yang ingin dipindai, lalu tekan Capture';
+                captureBtn.style.display = html5QrcodeScanner ? 'inline-block' : 'none';
+            }
+        }
+
+        // QR Scanner Functions
         function onScanSuccess(decodedText, decodedResult) {
             console.log('Scan berhasil:', decodedText, decodedResult);
             
@@ -76,33 +151,26 @@
             showResult(decodedText);
             showStatus('QR Code berhasil dipindai! ✅', 'success');
             
-            // Play success sound (optional)
             playBeep();
         }
 
-        // Error callback (not critical, just for debugging)
         function onScanFailure(error) {
             // Console log for debugging, but don't show to user
-            // console.log('Scan error (normal):', error);
         }
 
         async function startScanning() {
             try {
                 showStatus('Memulai kamera...', 'info');
                 
-                // Get available cameras
                 const devices = await Html5Qrcode.getCameras();
                 cameras = devices;
                 
                 if (devices && devices.length > 0) {
-                    // Populate camera selection dropdown
                     populateCameraSelect(devices);
                     
-                    // Configuration for scanning
                     const config = {
-                        fps: 10,    // Scans per second
+                        fps: 10,
                         qrbox: function(viewfinderWidth, viewfinderHeight) {
-                            // Square QR box with 70% of the smaller dimension
                             let minEdgePercentage = 0.7;
                             let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
                             let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
@@ -115,21 +183,29 @@
                         supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
                     };
                     
-                    // Start scanning with the first camera (usually back camera)
                     html5QrcodeScanner = new Html5Qrcode("reader");
                     
-                    // Prefer back camera for mobile devices
                     const cameraId = devices.find(device => 
                         device.label.toLowerCase().includes('back') || 
                         device.label.toLowerCase().includes('rear')
                     )?.id || devices[0].id;
                     
-                    await html5QrcodeScanner.start(
-                        cameraId,
-                        config,
-                        onScanSuccess,
-                        onScanFailure
-                    );
+                    if (scanMode === 'qr') {
+                        await html5QrcodeScanner.start(
+                            cameraId,
+                            config,
+                            onScanSuccess,
+                            onScanFailure
+                        );
+                    } else {
+                        // For text mode, start camera without QR scanning
+                        await html5QrcodeScanner.start(
+                            cameraId,
+                            config,
+                            () => {}, // No auto-scan for text mode
+                            () => {}
+                        );
+                    }
                     
                     // Update UI
                     document.getElementById('start-btn').style.display = 'none';
@@ -138,8 +214,13 @@
                     if (devices.length > 1) {
                         document.getElementById('camera-selection').style.display = 'block';
                     }
+
+                    // Show capture button for text mode
+                    if (scanMode === 'text') {
+                        document.getElementById('capture-btn').style.display = 'inline-block';
+                    }
                     
-                    showStatus('Kamera aktif. Arahkan ke QR Code untuk memindai! 📱', 'info');
+                    showStatus(`Kamera aktif. ${scanMode === 'qr' ? 'Arahkan ke QR Code untuk memindai!' : 'Tekan Capture untuk scan text!'} 📱`, 'info');
                     
                 } else {
                     throw new Error('Tidak ada kamera yang ditemukan');
@@ -161,7 +242,9 @@
                 // Update UI
                 document.getElementById('start-btn').style.display = 'inline-block';
                 document.getElementById('stop-btn').style.display = 'none';
+                document.getElementById('capture-btn').style.display = 'none';
                 document.getElementById('camera-selection').style.display = 'none';
+                document.getElementById('ocr-progress').style.display = 'none';
                 
                 clearStatus();
                 
@@ -203,12 +286,21 @@
                         }
                     };
                     
-                    await html5QrcodeScanner.start(
-                        selectedCameraId,
-                        config,
-                        onScanSuccess,
-                        onScanFailure
-                    );
+                    if (scanMode === 'qr') {
+                        await html5QrcodeScanner.start(
+                            selectedCameraId,
+                            config,
+                            onScanSuccess,
+                            onScanFailure
+                        );
+                    } else {
+                        await html5QrcodeScanner.start(
+                            selectedCameraId,
+                            config,
+                            () => {},
+                            () => {}
+                        );
+                    }
                     
                     showStatus('Kamera berhasil diganti! 📷', 'success');
                     
@@ -219,21 +311,126 @@
             }
         }
 
-        function showResult(result) {
+        // OCR Functions
+        async function captureImage() {
+            if (!html5QrcodeScanner) {
+                showStatus('❌ Kamera tidak aktif', 'error');
+                return;
+            }
+
+            try {
+                showStatus('📸 Mengambil gambar...', 'info');
+                
+                // Get video element from html5-qrcode
+                const video = document.querySelector('#reader video');
+                if (!video) {
+                    throw new Error('Video element tidak ditemukan');
+                }
+
+                // Create canvas to capture frame
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Draw current video frame to canvas
+                ctx.drawImage(video, 0, 0);
+                
+                // Convert canvas to blob
+                canvas.toBlob(async (blob) => {
+                    if (blob) {
+                        await performOCR(blob);
+                    } else {
+                        throw new Error('Gagal mengambil gambar');
+                    }
+                }, 'image/jpeg', 0.8);
+                
+            } catch (error) {
+                console.error('Error capturing image:', error);
+                showStatus('❌ Gagal mengambil gambar: ' + error.message, 'error');
+            }
+        }
+
+        async function performOCR(imageBlob) {
+            try {
+                showOCRProgress('Memproses gambar...', 0);
+                
+                const worker = await Tesseract.createWorker('ind+eng', 1, {
+                    logger: (m) => {
+                        if (m.status === 'recognizing text') {
+                            const progress = Math.round(m.progress * 100);
+                            showOCRProgress(`Mengenali teks... ${progress}%`, progress);
+                        }
+                    }
+                });
+
+                showOCRProgress('Menganalisis teks...', 50);
+                
+                const { data: { text } } = await worker.recognize(imageBlob);
+                await worker.terminate();
+                
+                hideOCRProgress();
+                
+                if (text.trim()) {
+                    currentResult = text.trim();
+                    showResult(text.trim(), true);
+                    showStatus('✅ Teks berhasil dipindai!', 'success');
+                    playBeep();
+                } else {
+                    showStatus('❌ Tidak ada teks yang terdeteksi. Coba ambil gambar dengan pencahayaan yang lebih baik.', 'error');
+                }
+                
+            } catch (error) {
+                console.error('OCR Error:', error);
+                hideOCRProgress();
+                showStatus('❌ Gagal memproses teks: ' + error.message, 'error');
+            }
+        }
+
+        function showOCRProgress(text, progress) {
+            const progressDiv = document.getElementById('ocr-progress');
+            const progressText = document.getElementById('progress-text');
+            const progressBar = document.getElementById('progress-bar');
+            
+            progressDiv.style.display = 'block';
+            progressText.textContent = text;
+            progressBar.style.width = progress + '%';
+        }
+
+        function hideOCRProgress() {
+            document.getElementById('ocr-progress').style.display = 'none';
+        }
+
+        function showResult(result, isText = false) {
             const resultContainer = document.getElementById('result-container');
             const resultContent = document.getElementById('result-content');
             const openBtn = document.getElementById('open-btn');
+            const downloadBtn = document.getElementById('download-btn');
             
-            // Convert result to plain text with line breaks
-            const formattedResult = result.replace(/,/g, '\n').replace(/;/g, '\n');
+            // Format result based on type
+            let formattedResult;
+            if (isText) {
+                // For OCR text, preserve formatting
+                formattedResult = result;
+            } else {
+                // For QR codes, format as before
+                formattedResult = result.replace(/,/g, '\n').replace(/;/g, '\n');
+            }
+            
             resultContent.textContent = formattedResult;
             resultContainer.classList.add('show');
             
-            // Show open button if result looks like a URL
-            if (isURL(result)) {
+            // Show appropriate buttons
+            if (isText) {
+                openBtn.style.display = 'none';
+                downloadBtn.style.display = 'inline-block';
+            } else if (isURL(result)) {
                 openBtn.style.display = 'inline-block';
+                downloadBtn.style.display = 'none';
             } else {
                 openBtn.style.display = 'none';
+                downloadBtn.style.display = 'none';
             }
             
             // Scroll to result
@@ -260,9 +457,23 @@
             }
         }
 
+        function downloadText() {
+            if (currentResult) {
+                const blob = new Blob([currentResult], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `scanned_text_${new Date().getTime()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showStatus('✅ File berhasil didownload!', 'success');
+            }
+        }
+
         function openResult() {
             if (currentResult && isURL(currentResult)) {
-                // Add https:// if missing
                 let url = currentResult;
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
                     url = 'https://' + url;
@@ -290,7 +501,6 @@
             statusDiv.textContent = message;
             statusDiv.style.display = 'block';
             
-            // Auto hide success messages after 4 seconds
             if (type === 'success') {
                 setTimeout(() => {
                     clearStatus();
@@ -304,7 +514,6 @@
         }
 
         function playBeep() {
-            // Create a simple beep sound
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioContext.createOscillator();
@@ -326,15 +535,14 @@
             }
         }
 
+        // Initialize mode UI on page load
+        window.addEventListener('load', () => {
+            updateModeUI();
+        });
+
         // Cleanup when page is closed
         window.addEventListener('beforeunload', () => {
             stopScanning();
-        });
-
-        // Auto-request camera permission on page load (optional)
-        window.addEventListener('load', () => {
-            // You can uncomment this to auto-start scanning
-            // startScanning();
         });
     </script>
 </body>
