@@ -58,6 +58,30 @@
                     </button>
                 </div>
 
+                <!-- File Upload for Text Mode -->
+                <div id="file-upload-section" style="display: none;">
+                    <div class="input-group">
+                        <label for="image-upload">📁 Upload Foto untuk Scan Text:</label>
+                        <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)" style="margin-bottom: 15px;">
+                        <button class="qr-btn" onclick="openCamera()">
+                            📷 Ambil Foto Baru
+                        </button>
+                    </div>
+                    
+                    <!-- Preview uploaded image -->
+                    <div id="image-preview" style="display: none; text-align: center; margin: 20px 0;">
+                        <img id="preview-img" style="max-width: 100%; max-height: 300px; border-radius: 10px; border: 2px solid #ddd;">
+                        <div style="margin-top: 10px;">
+                            <button class="qr-btn" onclick="processUploadedImage()">
+                                🔍 Scan Text dari Foto Ini
+                            </button>
+                            <button class="qr-btn" onclick="clearImagePreview()" style="background: #dc3545;">
+                                🗑️ Hapus Foto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="qr-camera-selection" id="camera-selection" style="display: none;">
                     <label for="camera-select">Pilih Kamera:</label>
                     <select id="camera-select" class="qr-camera-select" onchange="switchCamera()">
@@ -97,6 +121,7 @@
         let scanMode = 'qr'; // 'qr' or 'text'
         let videoElement = null;
         let canvasElement = null;
+        let currentImageBlob = null;
 
         // Scanner mode functions
         function switchToQRMode() {
@@ -130,6 +155,8 @@
             const title = document.getElementById('scanner-title');
             const instruction = document.getElementById('scanner-instruction');
             const captureBtn = document.getElementById('capture-btn');
+            const fileUploadSection = document.getElementById('file-upload-section');
+            const readerDiv = document.getElementById('reader');
 
             if (scanMode === 'qr') {
                 qrBtn.style.background = '#667eea';
@@ -140,6 +167,8 @@
                 title.textContent = '📱 QR Code Scanner';
                 instruction.textContent = 'Arahkan kamera ke QR Code atau Barcode untuk memindai';
                 captureBtn.style.display = 'none';
+                fileUploadSection.style.display = 'none';
+                readerDiv.style.display = 'block';
             } else {
                 textBtn.style.background = '#667eea';
                 textBtn.style.color = 'white';
@@ -147,8 +176,10 @@
                 qrBtn.style.color = '#333';
                 
                 title.textContent = '📄 Text Scanner (OCR)';
-                instruction.textContent = 'Arahkan kamera ke teks yang ingin dipindai, lalu tekan Capture';
+                instruction.textContent = 'Upload foto atau gunakan kamera untuk scan text';
                 captureBtn.style.display = html5QrcodeScanner ? 'inline-block' : 'none';
+                fileUploadSection.style.display = 'block';
+                // Keep reader visible for live camera option
             }
         }
 
@@ -320,7 +351,231 @@
             }
         }
 
-        // OCR Functions
+        // File Upload Functions
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showStatus('❌ File harus berupa gambar (JPG, PNG, dll)', 'error');
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('❌ Ukuran file terlalu besar. Maksimal 10MB', 'error');
+                return;
+            }
+
+            // Convert file to blob and show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                showImagePreview(e.target.result);
+                
+                // Convert to blob for OCR processing
+                fetch(e.target.result)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        currentImageBlob = blob;
+                        showStatus('✅ Foto berhasil dimuat. Klik "Scan Text" untuk memproses.', 'success');
+                    });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showImagePreview(imageSrc) {
+            const previewDiv = document.getElementById('image-preview');
+            const previewImg = document.getElementById('preview-img');
+            
+            previewImg.src = imageSrc;
+            previewDiv.style.display = 'block';
+        }
+
+        function clearImagePreview() {
+            const previewDiv = document.getElementById('image-preview');
+            const fileInput = document.getElementById('image-upload');
+            
+            previewDiv.style.display = 'none';
+            fileInput.value = '';
+            currentImageBlob = null;
+            showStatus('Foto dihapus', 'info');
+        }
+
+        function processUploadedImage() {
+            if (!currentImageBlob) {
+                showStatus('❌ Tidak ada foto yang dipilih', 'error');
+                return;
+            }
+
+            performOCR(currentImageBlob);
+        }
+
+        // Camera capture for taking new photo
+        async function openCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                // Create modal/popup for camera
+                showCameraModal(stream);
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                showStatus('❌ Gagal mengakses kamera. Gunakan upload file sebagai alternatif.', 'error');
+            }
+        }
+
+        function showCameraModal(stream) {
+            // Create modal HTML
+            const modal = document.createElement('div');
+            modal.id = 'camera-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.95);
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                box-sizing: border-box;
+            `;
+
+            const video = document.createElement('video');
+            video.style.cssText = `
+                max-width: 90%;
+                max-height: 60%;
+                width: auto;
+                height: auto;
+                border-radius: 15px;
+                background: black;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            `;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.srcObject = stream;
+
+            const title = document.createElement('div');
+            title.style.cssText = `
+                color: white;
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 20px;
+                text-align: center;
+            `;
+            title.textContent = '📷 Ambil Foto untuk Scan Text';
+
+            const controls = document.createElement('div');
+            controls.style.cssText = `
+                margin-top: 30px;
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+                justify-content: center;
+            `;
+
+            const captureBtn = document.createElement('button');
+            captureBtn.className = 'qr-btn';
+            captureBtn.style.cssText = `
+                background: #28a745;
+                color: white;
+                border: none;
+                padding: 15px 25px;
+                border-radius: 25px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            `;
+            captureBtn.textContent = '📸 Ambil Foto';
+            captureBtn.onclick = () => takePicture(video, stream, modal);
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'qr-btn';
+            cancelBtn.style.cssText = `
+                background: #dc3545;
+                color: white;
+                border: none;
+                padding: 15px 25px;
+                border-radius: 25px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            `;
+            cancelBtn.textContent = '❌ Batal';
+            cancelBtn.onclick = () => closeCameraModal(stream, modal);
+
+            // Add hover effects
+            captureBtn.onmouseover = () => captureBtn.style.background = '#218838';
+            captureBtn.onmouseout = () => captureBtn.style.background = '#28a745';
+            cancelBtn.onmouseover = () => cancelBtn.style.background = '#c82333';
+            cancelBtn.onmouseout = () => cancelBtn.style.background = '#dc3545';
+
+            controls.appendChild(captureBtn);
+            controls.appendChild(cancelBtn);
+            modal.appendChild(title);
+            modal.appendChild(video);
+            modal.appendChild(controls);
+            document.body.appendChild(modal);
+
+            // Close modal when clicking outside
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    closeCameraModal(stream, modal);
+                }
+            };
+        }
+
+        function takePicture(video, stream, modal) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to blob
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    // Show preview
+                    const imageUrl = URL.createObjectURL(blob);
+                    showImagePreview(imageUrl);
+                    currentImageBlob = blob;
+                    
+                    showStatus('✅ Foto berhasil diambil. Klik "Scan Text" untuk memproses.', 'success');
+                }
+                
+                closeCameraModal(stream, modal);
+            }, 'image/jpeg', 0.9);
+        }
+
+        function closeCameraModal(stream, modal) {
+            // Stop camera stream
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Remove modal
+            document.body.removeChild(modal);
+        }
         async function captureImage() {
             if (!html5QrcodeScanner) {
                 showStatus('❌ Kamera tidak aktif', 'error');
