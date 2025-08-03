@@ -113,6 +113,15 @@
             if (html5QrcodeScanner) {
                 stopScanning();
             }
+            
+            // Check if Tesseract is available
+            if (typeof Tesseract === 'undefined') {
+                showStatus('❌ OCR library tidak tersedia. Pastikan koneksi internet stabil dan refresh halaman.', 'error');
+                setTimeout(() => {
+                    scanMode = 'qr';
+                    updateModeUI();
+                }, 3000);
+            }
         }
 
         function updateModeUI() {
@@ -322,69 +331,116 @@
                 showStatus('📸 Mengambil gambar...', 'info');
                 
                 // Get video element from html5-qrcode
-                const video = document.querySelector('#reader video');
+                let video = document.querySelector('#reader video');
+                
+                // Fallback: try different selectors
                 if (!video) {
-                    throw new Error('Video element tidak ditemukan');
+                    video = document.querySelector('video');
+                }
+                
+                if (!video) {
+                    throw new Error('Video element tidak ditemukan. Pastikan kamera sudah aktif.');
+                }
+
+                // Wait for video to be ready
+                if (video.readyState < 2) {
+                    showStatus('⏳ Menunggu kamera siap...', 'info');
+                    await new Promise((resolve) => {
+                        video.addEventListener('loadeddata', resolve, { once: true });
+                        setTimeout(resolve, 3000); // timeout after 3 seconds
+                    });
                 }
 
                 // Create canvas to capture frame
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                // Set canvas size to video size
+                canvas.width = video.videoWidth || video.clientWidth || 640;
+                canvas.height = video.videoHeight || video.clientHeight || 480;
                 
                 // Draw current video frame to canvas
-                ctx.drawImage(video, 0, 0);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
                 // Convert canvas to blob
-                canvas.toBlob(async (blob) => {
-                    if (blob) {
-                        await performOCR(blob);
-                    } else {
-                        throw new Error('Gagal mengambil gambar');
-                    }
-                }, 'image/jpeg', 0.8);
+                return new Promise((resolve, reject) => {
+                    canvas.toBlob(async (blob) => {
+                        if (blob && blob.size > 0) {
+                            await performOCR(blob);
+                            resolve();
+                        } else {
+                            reject(new Error('Gagal mengambil gambar. Ukuran gambar kosong.'));
+                        }
+                    }, 'image/jpeg', 0.9);
+                });
                 
             } catch (error) {
                 console.error('Error capturing image:', error);
-                showStatus('❌ Gagal mengambil gambar: ' + error.message, 'error');
+                let errorMessage = error.message || 'Gagal mengambil gambar';
+                showStatus('❌ ' + errorMessage, 'error');
             }
         }
 
         async function performOCR(imageBlob) {
             try {
-                showOCRProgress('Memproses gambar...', 0);
+                showOCRProgress('Memproses gambar...', 10);
                 
-                const worker = await Tesseract.createWorker('ind+eng', 1, {
+                // Create worker with proper initialization
+                const worker = await Tesseract.createWorker({
                     logger: (m) => {
+                        console.log('OCR Progress:', m);
                         if (m.status === 'recognizing text') {
                             const progress = Math.round(m.progress * 100);
-                            showOCRProgress(`Mengenali teks... ${progress}%`, progress);
+                            showOCRProgress(`Mengenali teks... ${progress}%`, 20 + (progress * 0.6));
                         }
                     }
                 });
 
-                showOCRProgress('Menganalisis teks...', 50);
+                showOCRProgress('Memuat model OCR...', 20);
+                
+                // Initialize worker with language
+                await worker.loadLanguage('eng');
+                await worker.initialize('eng');
+                
+                showOCRProgress('Menganalisis gambar...', 40);
+                
+                // Set parameters for better text recognition
+                await worker.setParameters({
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?@#$%^&*()_+-=[]{}|;:,.<>?/',
+                    tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+                });
+                
+                showOCRProgress('Memproses teks...', 60);
                 
                 const { data: { text } } = await worker.recognize(imageBlob);
+                
+                showOCRProgress('Menyelesaikan...', 90);
+                
                 await worker.terminate();
                 
                 hideOCRProgress();
                 
-                if (text.trim()) {
+                if (text && text.trim()) {
                     currentResult = text.trim();
                     showResult(text.trim(), true);
                     showStatus('✅ Teks berhasil dipindai!', 'success');
                     playBeep();
                 } else {
-                    showStatus('❌ Tidak ada teks yang terdeteksi. Coba ambil gambar dengan pencahayaan yang lebih baik.', 'error');
+                    showStatus('❌ Tidak ada teks yang terdeteksi. Pastikan teks terlihat jelas dan pencahayaan cukup.', 'error');
                 }
                 
             } catch (error) {
                 console.error('OCR Error:', error);
                 hideOCRProgress();
-                showStatus('❌ Gagal memproses teks: ' + error.message, 'error');
+                let errorMessage = 'Terjadi kesalahan saat memproses gambar';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (typeof error === 'string') {
+                    errorMessage = error;
+                }
+                
+                showStatus('❌ Gagal memproses teks: ' + errorMessage, 'error');
             }
         }
 
