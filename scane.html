@@ -40,12 +40,13 @@
                 <div id="ocr-tips" style="display: none;" class="format-info">
                     <h3>💡 Tips untuk Hasil OCR Terbaik:</h3>
                     <ul style="margin: 10px 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
+                        <li><strong>Gunakan Kamera HP:</strong> Aplikasi kamera bawaan HP memberikan kualitas terbaik</li>
                         <li><strong>Pencahayaan:</strong> Pastikan teks terlihat jelas dengan cahaya yang cukup</li>
                         <li><strong>Kontras:</strong> Teks hitam di background putih memberikan hasil terbaik</li>
                         <li><strong>Jarak:</strong> Ambil foto dari jarak yang tepat (tidak terlalu dekat/jauh)</li>
                         <li><strong>Kemiringan:</strong> Pastikan teks tidak miring atau terdistorsi</li>
                         <li><strong>Fokus:</strong> Pastikan teks terlihat tajam dan tidak blur</li>
-                        <li><strong>Resolusi:</strong> Gunakan kamera dengan resolusi tinggi untuk teks kecil</li>
+                        <li><strong>Resolusi:</strong> Gunakan resolusi tinggi untuk teks kecil</li>
                     </ul>
                 </div>
 
@@ -74,11 +75,19 @@
                 <!-- File Upload for Text Mode -->
                 <div id="file-upload-section" style="display: none;">
                     <div class="input-group">
-                        <label for="image-upload">📁 Upload Foto untuk Scan Text:</label>
+                        <label for="image-upload">📁 Upload Foto dari Galeri:</label>
                         <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)" style="margin-bottom: 15px;">
-                        <button class="qr-btn" onclick="openCamera()">
-                            📷 Ambil Foto Baru
-                        </button>
+                        
+                        <div style="text-align: center; margin: 20px 0; color: #666; font-weight: 600;">
+                            - ATAU -
+                        </div>
+                        
+                        <label>📷 Ambil Foto dengan Kamera HP:</label>
+                        <input type="file" id="camera-capture" accept="image/*" capture="environment" onchange="handleImageUpload(event)" style="margin-bottom: 15px;">
+                        
+                        <div style="font-size: 12px; color: #666; text-align: center; margin-top: 10px;">
+                            * Tombol di atas akan membuka aplikasi kamera HP untuk hasil foto terbaik
+                        </div>
                     </div>
                     
                     <!-- Preview uploaded image -->
@@ -191,11 +200,11 @@
                 qrBtn.style.color = '#333';
                 
                 title.textContent = '📄 Text Scanner (OCR)';
-                instruction.textContent = 'Upload foto atau gunakan kamera untuk scan text';
-                captureBtn.style.display = html5QrcodeScanner ? 'inline-block' : 'none';
+                instruction.textContent = 'Ambil foto dengan kamera HP atau upload dari galeri';
+                captureBtn.style.display = 'none'; // Hide live capture
                 fileUploadSection.style.display = 'block';
                 ocrTips.style.display = 'block';
-                // Keep reader visible for live camera option
+                readerDiv.style.display = 'none'; // Hide live camera for text mode
             }
         }
 
@@ -380,9 +389,9 @@
                 return;
             }
 
-            // Validate file size (max 10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                showStatus('❌ Ukuran file terlalu besar. Maksimal 10MB', 'error');
+            // Validate file size (max 15MB for camera photos)
+            if (file.size > 15 * 1024 * 1024) {
+                showStatus('❌ Ukuran file terlalu besar. Maksimal 15MB', 'error');
                 return;
             }
 
@@ -413,9 +422,11 @@
         function clearImagePreview() {
             const previewDiv = document.getElementById('image-preview');
             const fileInput = document.getElementById('image-upload');
+            const cameraInput = document.getElementById('camera-capture');
             
             previewDiv.style.display = 'none';
             fileInput.value = '';
+            cameraInput.value = '';
             currentImageBlob = null;
             showStatus('Foto dihapus', 'info');
         }
@@ -427,184 +438,6 @@
             }
 
             performOCR(currentImageBlob);
-        }
-
-        // Camera capture for taking new photo
-        async function openCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1920, min: 1280 },
-                        height: { ideal: 1080, min: 720 },
-                        focusMode: 'continuous',
-                        whiteBalanceMode: 'continuous'
-                    } 
-                });
-                
-                // Create modal/popup for camera
-                showCameraModal(stream);
-                
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-                // Try with lower resolution if high-res fails
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { 
-                            facingMode: 'environment',
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        } 
-                    });
-                    showCameraModal(stream);
-                } catch (fallbackError) {
-                    showStatus('❌ Gagal mengakses kamera. Gunakan upload file sebagai alternatif.', 'error');
-                }
-            }
-        }
-
-        function showCameraModal(stream) {
-            // Create modal HTML
-            const modal = document.createElement('div');
-            modal.id = 'camera-modal';
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.95);
-                z-index: 10000;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                box-sizing: border-box;
-            `;
-
-            const video = document.createElement('video');
-            video.style.cssText = `
-                max-width: 90%;
-                max-height: 60%;
-                width: auto;
-                height: auto;
-                border-radius: 15px;
-                background: black;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            `;
-            video.autoplay = true;
-            video.playsInline = true;
-            video.srcObject = stream;
-
-            const title = document.createElement('div');
-            title.style.cssText = `
-                color: white;
-                font-size: 18px;
-                font-weight: 600;
-                margin-bottom: 20px;
-                text-align: center;
-            `;
-            title.textContent = '📷 Ambil Foto untuk Scan Text';
-
-            const controls = document.createElement('div');
-            controls.style.cssText = `
-                margin-top: 30px;
-                display: flex;
-                gap: 20px;
-                flex-wrap: wrap;
-                justify-content: center;
-            `;
-
-            const captureBtn = document.createElement('button');
-            captureBtn.className = 'qr-btn';
-            captureBtn.style.cssText = `
-                background: #28a745;
-                color: white;
-                border: none;
-                padding: 15px 25px;
-                border-radius: 25px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            `;
-            captureBtn.textContent = '📸 Ambil Foto';
-            captureBtn.onclick = () => takePicture(video, stream, modal);
-
-            const cancelBtn = document.createElement('button');
-            cancelBtn.className = 'qr-btn';
-            cancelBtn.style.cssText = `
-                background: #dc3545;
-                color: white;
-                border: none;
-                padding: 15px 25px;
-                border-radius: 25px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            `;
-            cancelBtn.textContent = '❌ Batal';
-            cancelBtn.onclick = () => closeCameraModal(stream, modal);
-
-            // Add hover effects
-            captureBtn.onmouseover = () => captureBtn.style.background = '#218838';
-            captureBtn.onmouseout = () => captureBtn.style.background = '#28a745';
-            cancelBtn.onmouseover = () => cancelBtn.style.background = '#c82333';
-            cancelBtn.onmouseout = () => cancelBtn.style.background = '#dc3545';
-
-            controls.appendChild(captureBtn);
-            controls.appendChild(cancelBtn);
-            modal.appendChild(title);
-            modal.appendChild(video);
-            modal.appendChild(controls);
-            document.body.appendChild(modal);
-
-            // Close modal when clicking outside
-            modal.onclick = (e) => {
-                if (e.target === modal) {
-                    closeCameraModal(stream, modal);
-                }
-            };
-        }
-
-        function takePicture(video, stream, modal) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            ctx.drawImage(video, 0, 0);
-            
-            // Convert to blob
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    // Show preview
-                    const imageUrl = URL.createObjectURL(blob);
-                    showImagePreview(imageUrl);
-                    currentImageBlob = blob;
-                    
-                    showStatus('✅ Foto berhasil diambil. Klik "Scan Text" untuk memproses.', 'success');
-                }
-                
-                closeCameraModal(stream, modal);
-            }, 'image/jpeg', 0.9);
-        }
-
-        function closeCameraModal(stream, modal) {
-            // Stop camera stream
-            stream.getTracks().forEach(track => track.stop());
-            
-            // Remove modal
-            document.body.removeChild(modal);
         }
         async function captureImage() {
             if (!html5QrcodeScanner) {
