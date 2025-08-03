@@ -288,7 +288,7 @@ body {
 .generate-btn {
     width: 100%;
     padding: 18px;
-    background: linear-gradient(135deg, #4CAF50, #45a049);
+    background: #667eea;
     color: white;
     border: none;
     border-radius: 10px;
@@ -304,7 +304,7 @@ body {
     box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
 }
 
-.generate-btn:active {
+.lgenerate-btn:active {
     transform: translateY(0);
 }
 
@@ -790,7 +790,7 @@ td {
 }
 
 .qr-copy-btn {
-    background: #28a745;
+    background: #667eea;
     font-size: 0.95rem;
     padding: 10px 20px;
     color: white;
