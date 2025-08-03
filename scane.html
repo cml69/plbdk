@@ -502,13 +502,16 @@
                     errorHandler: err => console.error('Tesseract Error:', err)
                 });
 
-                // Optimize Tesseract parameters for better accuracy
+                // Optimize Tesseract parameters for better line detection
                 await tesseractWorker.setParameters({
-                    tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+                    tessedit_pageseg_mode: Tesseract.PSM.AUTO, // Auto detect layout
                     tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
-                    preserve_interword_spaces: '1',
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%^&*()_+-=[]{}|;:"\/<> ',
-                    user_defined_dpi: '300'
+                    preserve_interword_spaces: '1', // Preserve spaces
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%^&*()_+-=[]{}|;:"\/<>\n\r\t ',
+                    user_defined_dpi: '300',
+                    // Tambahan untuk preserving line breaks
+                    tessedit_create_txt: '1',
+                    tessedit_create_hocr: '0'
                 });
                 
                 showStatus('✅ OCR engine siap digunakan!', 'success');
@@ -567,17 +570,17 @@
                 // Optimized grayscale conversion for text
                 const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
                 
-                // Apply gamma correction
-                let enhanced = Math.pow(gray / 255, 0.7) * 255;
+                // Apply gamma correction - lebih ringan untuk preserving detail
+                let enhanced = Math.pow(gray / 255, 0.8) * 255;
                 
-                // Adaptive contrast enhancement
-                if (enhanced > 127) {
-                    enhanced = Math.min(255, enhanced * 1.3);
+                // Adaptive contrast enhancement - lebih ringan
+                if (enhanced > 140) {
+                    enhanced = Math.min(255, enhanced * 1.2);
                 } else {
-                    enhanced = Math.max(0, enhanced * 0.6);
+                    enhanced = Math.max(0, enhanced * 0.8);
                 }
                 
-                // Apply sharpening filter
+                // Apply result
                 enhanced = Math.round(enhanced);
                 
                 data[i] = enhanced;     // R
@@ -589,8 +592,8 @@
             // Apply the enhanced image data back to canvas
             ctx.putImageData(imageData, 0, 0);
             
-            // Additional sharpening using convolution
-            applySharpeningFilter(ctx, width, height);
+            // Skip additional sharpening to preserve text spacing
+            // applySharpeningFilter(ctx, width, height);
         }
 
         function applySharpeningFilter(ctx, width, height) {
@@ -644,17 +647,20 @@
             return text
                 .replace(/\r\n/g, '\n')  // Normalize line endings
                 .replace(/\r/g, '\n')    // Normalize line endings
-                .replace(/\s+/g, ' ')    // Normalize whitespace
+                // TIDAK menggabungkan multiple spaces menjadi satu
+                // .replace(/\s+/g, ' ')    // Dihapus agar spacing asli tetap
                 .replace(/[|]/g, 'I')    // Common OCR mistakes
                 .replace(/[₹]/g, 'R')    // Currency symbols
                 .replace(/[§]/g, 'S')    // Section symbols
-                .replace(/\n\s*\n/g, '\n') // Remove empty lines
-                .replace(/^\s+|\s+$/g, '') // Trim
+                // TIDAK menghapus empty lines agar format tetap
+                // .replace(/\n\s*\n/g, '\n') // Dihapus
+                .replace(/^\s+|\s+$/g, '') // Trim awal dan akhir saja
                 .trim();
         }
 
         function formatTextForDisplay(text) {
-            // Jangan ubah text, biarkan CSS yang handle wrapping
+            // Kembalikan text asli tanpa formatting tambahan
+            // Biarkan format asli dari OCR
             return text;
         }
 
@@ -681,8 +687,8 @@
             // Format result based on type
             let formattedResult;
             if (isText) {
-                // For OCR text, apply smart formatting
-                formattedResult = formatTextForDisplay(result);
+                // For OCR text, preserve original formatting completely
+                formattedResult = result; // Tidak ada formatting tambahan
             } else {
                 // For QR codes, format as before
                 formattedResult = result.replace(/,/g, '\n').replace(/;/g, '\n');
@@ -695,14 +701,14 @@
             resultContent.style.cssText = `
                 word-wrap: break-word !important;
                 word-break: break-word !important;
-                white-space: pre-wrap !important;
+                white-space: pre !important;
                 overflow-wrap: break-word !important;
                 max-width: 100% !important;
                 width: 100% !important;
-                overflow: hidden !important;
+                overflow: auto !important;
                 box-sizing: border-box !important;
                 display: block !important;
-                text-overflow: ellipsis !important;
+                text-overflow: clip !important;
             `;
             
             // Show appropriate buttons
