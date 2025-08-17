@@ -34,7 +34,7 @@ const MENU_CONFIG = {
             id: "sale-calc",
             href: "sale.html",
             icon: "money",
-            title: "Monitoring Total Belanjaan"
+            title: "Kalkukator Sales"
         },
         {
             id: "custom-barcode",
