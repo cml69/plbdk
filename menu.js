@@ -30,6 +30,12 @@ const MENU_CONFIG = {
             icon: "mail",
             title: "Mail Generator"
         },
+         {
+            id: "sale-calc",
+            href: "sale.html",
+            icon: "money",
+            title: "Monitoring Total Belanjaan"
+        },
         {
             id: "custom-barcode",
             href: "#",

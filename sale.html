@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Total Belanjaan</title>
+    <script src="menu.js"></script>
+    <script src="footer.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            background-color: #f5f5f5;
+            padding: 0;
+        }
+        .total-row {
+            background-color: white !important;
+            color: black !important;
+            font-weight: bold;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .input-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .input-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .input-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="date"], input[type="time"], input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        button:hover {
+            background: #218838;
+        }
+        button.reset {
+            background: #dc3545;
+            margin-left: 10px;
+        }
+        button.reset:hover {
+            background: #c82333;
+            transform: scale(1.02);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #343a40;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #e9ecef;
+        }
+        .currency {
+            text-align: right;
+            font-family: monospace;
+        }
+        .datetime-display {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        button.keypad-btn:hover {
+            background: #e9ecef !important;
+            transform: scale(1.05);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                margin: 5px;
+                width: calc(100% - 10px);
+                padding: 10px;
+            }
+            
+            .input-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            button {
+                width: 100%;
+                margin-left: 0;
+                margin-bottom: 10px;
+            }
+            
+            .datetime-display {
+                font-size: 16px;
+                padding: 10px;
+            }
+            
+            th, td {
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+        }
+
+        @media (max-width: 480px) {
+            body {
+                margin: 5px;
+            }
+            
+            .container {
+                width: calc(100% - 10px);
+                margin: 0;
+                padding: 8px;
+            }
+            
+            .input-section {
+                padding: 15px;
+            }
+            
+            th, td {
+                padding: 6px;
+                font-size: 12px;
+            }
+            
+            .datetime-display {
+                font-size: 14px;
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Container (akan dimuat oleh menu.js) -->
+    <div id="menu-container"></div>
+
+    <div class="container">
+        <h1>Monitoring Total Belanjaan</h1>
+        
+        <div class="input-section">
+            <div class="datetime-display" id="datetimeDisplay">
+                Tanggal: - | Jam: -
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="totalBelanja">Total Belanja (Rp):</label>
+                    <input type="text" id="totalBelanja" placeholder="0" oninput="formatInputValue(this)">
+                </div>
+            </div>
+            
+            <!-- Keypad Angka -->
+            <div class="keypad-container" style="background: white; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #ddd;">
+                <div class="keypad-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 250px; margin: 0 auto;">
+                    <button class="keypad-btn" onclick="inputAngka('1')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">1</button>
+                    <button class="keypad-btn" onclick="inputAngka('2')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">2</button>
+                    <button class="keypad-btn" onclick="inputAngka('3')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">3</button>
+                    <button class="keypad-btn" onclick="inputAngka('4')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">4</button>
+                    <button class="keypad-btn" onclick="inputAngka('5')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">5</button>
+                    <button class="keypad-btn" onclick="inputAngka('6')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">6</button>
+                    <button class="keypad-btn" onclick="inputAngka('7')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">7</button>
+                    <button class="keypad-btn" onclick="inputAngka('8')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">8</button>
+                    <button class="keypad-btn" onclick="inputAngka('9')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">9</button>
+                    <button class="keypad-btn" onclick="inputAngka('000')" style="padding: 15px; font-size: 16px; font-weight: bold; background: #e9ecef; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">000</button>
+                    <button class="keypad-btn" onclick="inputAngka('0')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">0</button>
+                    <button class="keypad-btn" onclick="hapusAngka()" style="padding: 15px; font-size: 16px; font-weight: bold; background: #dc3545; color: white; border: 1px solid #dc3545; border-radius: 5px; cursor: pointer;">⌫</button>
+                </div>
+            </div>
+            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <button onclick="tambahData('Tunai')" style="background: white; color: black; border: 1px solid #ddd; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;">💰 Tunai</button>
+                <button onclick="tambahData('Cash Out')" style="background: white; color: black; border: 1px solid #ddd; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;">💸 Cash Out</button>
+            </div>
+        </div>
+
+        <table id="tabelData">
+            <thead>
+                <tr style="background: white;">
+                    <th style="background: white; color: black;">No</th>
+                    <th style="background: white; color: black;">Tanggal</th>
+                    <th style="background: white; color: black;">Jam</th>
+                    <th style="background: white; color: black;">Total</th>
+                    <th style="background: white; color: black;">Cash Out</th>
+                    <th style="background: white; color: black;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data akan ditambahkan di sini -->
+            </tbody>
+        </table>
+        
+        <!-- Jarak pemisah yang sangat besar agar benar-benar tidak terlihat di layar HP -->
+        <div style="margin-top: 800px; margin-bottom: 50px; text-align: center; padding: 30px; background: #fff3cd; border: 2px solid #ffeaa7; border-radius: 10px;">
+            <button class="reset" onclick="resetData()" style="background: #dc3545; color: white; border: none; padding: 15px 30px; font-size: 16px; font-weight: bold; border-radius: 8px;">🗑️ Reset Semua Data</button>
+            <div style="margin-top: 15px; font-size: 14px; color: #856404; font-weight: bold;">
+                ⚠️ PERINGATAN: Tindakan ini akan menghapus semua data dan tidak dapat dibatalkan!
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Container (akan dimuat oleh footer.js) -->
+    <div id="footer-container"></div>
+
+    <script>
+        let dataTransaksi = [];
+        let counter = 1;
+
+        // Auto Save Cache Functions
+        function saveToCache() {
+            const data = {
+                dataTransaksi: dataTransaksi,
+                counter: counter
+            };
+            try {
+                const dataString = JSON.stringify(data);
+                // Menggunakan cookie sebagai alternatif localStorage
+                document.cookie = `belanja_data=${dataString}; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/`;
+                console.log('Data berhasil disimpan ke cache');
+            } catch (error) {
+                console.log('Error saving to cache:', error);
+            }
+        }
+
+        function loadFromCache() {
+            try {
+                // Membaca dari cookie
+                const cookies = document.cookie.split(';');
+                let savedData = null;
+                
+                for (let cookie of cookies) {
+                    const [key, value] = cookie.trim().split('=');
+                    if (key === 'belanja_data' && value) {
+                        savedData = JSON.parse(decodeURIComponent(value));
+                        break;
+                    }
+                }
+
+                if (savedData) {
+                    dataTransaksi = savedData.dataTransaksi || [];
+                    counter = savedData.counter || 1;
+                    tampilkanData();
+                    console.log('Data berhasil dimuat dari cache');
+                    return true;
+                }
+            } catch (error) {
+                console.log('Error loading from cache:', error);
+            }
+            return false;
+        }
+
+        function clearCache() {
+            // Hapus cookie
+            document.cookie = 'belanja_data=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            console.log('Cache berhasil dihapus');
+        }
+
+        // Set tanggal dan jam otomatis saat halaman dimuat
+        window.onload = function() {
+            setCurrentDateTime();
+            // Load data dari cache saat halaman dimuat
+            const loaded = loadFromCache();
+            if (loaded) {
+                console.log('Data existing dimuat dari cache');
+            } else {
+                console.log('Tidak ada data tersimpan, mulai fresh');
+            }
+        }
+
+        function setCurrentDateTime() {
+            const now = new Date();
+            const tanggal = now.toLocaleDateString('id-ID');
+            const jam = now.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'});
+            document.getElementById('datetimeDisplay').textContent = `Tanggal: ${tanggal} | Jam: ${jam}`;
+            return { tanggal, jam };
+        }
+
+        function tambahData(jenis) {
+            const { tanggal, jam } = setCurrentDateTime();
+            const totalBelanja = parseFloat(unformatRupiah(document.getElementById('totalBelanja').value)) || 0;
+
+            if (totalBelanja <= 0) {
+                alert('Total harus lebih dari 0!');
+                return;
+            }
+
+            // Untuk cash out, jadikan negatif
+            const nilaiTransaksi = jenis === 'Cash Out' ? -totalBelanja : totalBelanja;
+
+            const transaksi = {
+                no: counter++,
+                tanggal: tanggal,
+                jam: jam,
+                totalBelanja: nilaiTransaksi,
+                isCashOut: jenis === 'Cash Out'
+            };
+
+            dataTransaksi.push(transaksi);
+            tampilkanData();
+            
+            // Auto save setelah menambah data
+            saveToCache();
+
+            // Reset input
+            document.getElementById('totalBelanja').value = '';
+        }
+
+        function hapusData(index) {
+            if (confirm('Yakin ingin menghapus data ini?')) {
+                dataTransaksi.splice(index, 1);
+                tampilkanData();
+                
+                // Auto save setelah menghapus data
+                saveToCache();
+            }
+        }
+
+        function tampilkanData() {
+            const tbody = document.querySelector('#tabelData tbody');
+            tbody.innerHTML = '';
+
+            dataTransaksi.forEach((transaksi, index) => {
+                const row = tbody.insertRow();
+                const cellClass = transaksi.totalBelanja < 0 ? 'style="background-color: white; color: black;"' : 'style="background-color: white; color: black;"';
+                
+                row.innerHTML = `
+                    <td ${cellClass}>${transaksi.no}</td>
+                    <td ${cellClass}>${transaksi.tanggal}</td>
+                    <td ${cellClass}>${transaksi.jam}</td>
+                    <td ${cellClass} class="currency">${transaksi.isCashOut ? '-' : 'Rp ' + Math.abs(transaksi.totalBelanja).toLocaleString('id-ID')}</td>
+                    <td ${cellClass} class="currency">${transaksi.isCashOut ? 'Rp ' + Math.abs(transaksi.totalBelanja).toLocaleString('id-ID') : '-'}</td>
+                    <td ${cellClass}><button onclick="hapusData(${index})" style="background: white; color: black; border: 1px solid #ddd; padding: 5px 10px; border-radius: 3px; cursor: pointer;">🗑️</button></td>
+                `;
+            });
+
+            // Tambahkan row total
+            if (dataTransaksi.length > 0) {
+                const totalRow = tbody.insertRow();
+                totalRow.className = 'total-row';
+                const totalAkhir = dataTransaksi.reduce((sum, item) => sum + item.totalBelanja, 0);
+                totalRow.innerHTML = `
+                    <td colspan="4" style="text-align: right; font-weight: bold; background-color: white; color: black;">TOTAL KESELURUHAN:</td>
+                    <td class="currency" style="background-color: white; color: black; font-weight: bold;">Rp ${totalAkhir.toLocaleString('id-ID')}</td>
+                    <td style="background-color: white; color: black;"></td>
+                `;
+            }
+        }
+
+        // Fungsi untuk format angka dengan titik pemisah ribuan
+        function formatRupiah(angka) {
+            return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        // Fungsi untuk menghapus format dan ambil angka saja
+        function unformatRupiah(formatted) {
+            return formatted.replace(/\./g, '');
+        }
+
+        // Fungsi untuk memformat input saat mengetik
+        function formatInputValue(input) {
+            let value = input.value.replace(/\./g, '');
+            if (value) {
+                input.value = formatRupiah(value);
+            }
+        }
+
+        // Fungsi untuk keypad angka
+        function inputAngka(angka) {
+            const input = document.getElementById('totalBelanja');
+            let currentValue = unformatRupiah(input.value || '0');
+            
+            if (currentValue === '0' || currentValue === '') {
+                currentValue = angka;
+            } else {
+                currentValue = currentValue + angka;
+            }
+            
+            input.value = formatRupiah(currentValue);
+        }
+
+        function hapusAngka() {
+            const input = document.getElementById('totalBelanja');
+            let currentValue = unformatRupiah(input.value || '');
+            
+            if (currentValue.length > 1) {
+                currentValue = currentValue.slice(0, -1);
+                input.value = formatRupiah(currentValue);
+            } else {
+                input.value = '';
+            }
+        }
+
+        function clearInput() {
+            const input = document.getElementById('totalBelanja');
+            input.value = '';
+        }
+
+        function resetData() {
+            if (confirm('Yakin ingin menghapus semua data?')) {
+                dataTransaksi = [];
+                counter = 1;
+                tampilkanData();
+                
+                // Hapus cache juga saat reset
+                clearCache();
+            }
+        }
+    </script>
+</body>
+</html>
