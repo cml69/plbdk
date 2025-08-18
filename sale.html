@@ -8,32 +8,35 @@
     <script src="menu.js"></script>
     <script src="footer.js"></script>
     <style>
-        /* Menu Styles dari styles.css */
+        /* Menu Styles dari styles.css - dengan specificity tinggi */
         .menu-toggle {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1001;
-            background: #333;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            opacity: 1;
-            transform: scale(1);
+            position: fixed !important;
+            top: 20px !important;
+            left: 20px !important;
+            z-index: 1001 !important;
+            background: #333 !important;
+            color: white !important;
+            border: none !important;
+            padding: 10px 15px !important;
+            border-radius: 5px !important;
+            cursor: pointer !important;
+            font-size: 16px !important;
+            transition: opacity 0.3s ease, transform 0.3s ease !important;
+            opacity: 1 !important;
+            transform: scale(1) !important;
+            width: auto !important;
+            margin: 0 !important;
+            margin-left: 0 !important;
         }
 
         .menu-toggle:hover {
-            background: #555;
+            background: #555 !important;
         }
 
         .menu-toggle.hidden {
-            opacity: 0;
-            transform: scale(0.8);
-            pointer-events: none;
+            opacity: 0 !important;
+            transform: scale(0.8) !important;
+            pointer-events: none !important;
         }
 
         .slide-menu {
@@ -209,7 +212,9 @@
             box-sizing: border-box;
             text-align: center;
         }
-        button {
+        
+        /* Button styling - kecuali menu-toggle */
+        button:not(.menu-toggle) {
             background: #28a745;
             color: white;
             padding: 12px 25px;
@@ -220,17 +225,21 @@
             font-weight: bold;
             white-space: nowrap;
         }
-        button:hover {
+        
+        button:not(.menu-toggle):hover {
             background: #218838;
         }
+        
         button.reset {
             background: #dc3545;
             margin-left: 10px;
         }
+        
         button.reset:hover {
             background: #c82333;
             transform: scale(1.02);
         }
+        
         table {
             width: 100%;
             border-collapse: collapse;
@@ -281,8 +290,8 @@
             }
             
             .menu-toggle {
-                top: 10px;
-                left: 10px;
+                top: 10px !important;
+                left: 10px !important;
             }
 
             .container {
@@ -296,7 +305,7 @@
                 gap: 10px;
             }
             
-            button {
+            button:not(.menu-toggle) {
                 width: 100%;
                 margin-left: 0;
                 margin-bottom: 10px;
