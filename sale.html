@@ -278,6 +278,13 @@
             </div>
         </div>
 
+        <!-- Tabel Total Keseluruhan -->
+        <table id="tabelTotal" style="margin-bottom: 20px;">
+            <tbody>
+                <!-- Total akan ditambahkan di sini -->
+            </tbody>
+        </table>
+
         <table id="tabelData">
             <thead>
                 <tr style="background: white;">
@@ -615,11 +622,28 @@
 
         function tampilkanData() {
             const tbody = document.querySelector('#tabelData tbody');
+            const totalTbody = document.querySelector('#tabelTotal tbody');
+            
             tbody.innerHTML = '';
+            totalTbody.innerHTML = '';
 
             console.log(`Displaying ${dataTransaksi.length} transactions`);
 
-            dataTransaksi.forEach((transaksi, index) => {
+            // Tampilkan total di tabel terpisah di atas (hanya jika ada data)
+            if (dataTransaksi.length > 0) {
+                const totalRow = totalTbody.insertRow();
+                totalRow.className = 'total-row';
+                const totalAkhir = dataTransaksi.reduce((sum, item) => sum + item.totalBelanja, 0);
+                totalRow.innerHTML = `
+                    <td style="text-align: right; font-weight: bold; background-color: white; color: black; padding: 10px;">TOTAL KESELURUHAN:</td>
+                    <td class="currency" style="background-color: white; color: black; font-weight: bold; padding: 10px;">Rp ${totalAkhir.toLocaleString('id-ID')}</td>
+                `;
+            }
+
+            // Tampilkan data dalam urutan terbalik (data terbaru di atas)
+            const dataReversed = [...dataTransaksi].reverse();
+            dataReversed.forEach((transaksi, reversedIndex) => {
+                const originalIndex = dataTransaksi.length - 1 - reversedIndex;
                 const row = tbody.insertRow();
                 const cellClass = 'style="background-color: white; color: black;"';
                 
@@ -629,21 +653,9 @@
                     <td ${cellClass}>${transaksi.jam}</td>
                     <td ${cellClass} class="currency">${transaksi.isCashOut ? '-' : 'Rp ' + Math.abs(transaksi.totalBelanja).toLocaleString('id-ID')}</td>
                     <td ${cellClass} class="currency">${transaksi.isCashOut ? 'Rp ' + Math.abs(transaksi.totalBelanja).toLocaleString('id-ID') : '-'}</td>
-                    <td ${cellClass}><button onclick="hapusData(${index})" style="background: white; color: black; border: 1px solid #ddd; padding: 5px 10px; border-radius: 3px; cursor: pointer;">🗑️</button></td>
+                    <td ${cellClass}><button onclick="hapusData(${originalIndex})" style="background: white; color: black; border: 1px solid #ddd; padding: 5px 10px; border-radius: 3px; cursor: pointer;">🗑️</button></td>
                 `;
             });
-
-            // Tambahkan row total
-            if (dataTransaksi.length > 0) {
-                const totalRow = tbody.insertRow();
-                totalRow.className = 'total-row';
-                const totalAkhir = dataTransaksi.reduce((sum, item) => sum + item.totalBelanja, 0);
-                totalRow.innerHTML = `
-                    <td colspan="4" style="text-align: right; font-weight: bold; background-color: white; color: black;">TOTAL KESELURUHAN:</td>
-                    <td class="currency" style="background-color: white; color: black; font-weight: bold;">Rp ${totalAkhir.toLocaleString('id-ID')}</td>
-                    <td style="background-color: white; color: black;"></td>
-                `;
-            }
         }
 
         // Fungsi untuk format angka dengan titik pemisah ribuan
