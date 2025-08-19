@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoring Total Belanjaan</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="menu.js"></script>
-    <script src="footer.js"></script>
     <style>
-        /* Menu Styles dari styles.css - dengan specificity tinggi */
+        /* Menu Styles */
         .menu-toggle {
             position: fixed !important;
             top: 20px !important;
@@ -37,123 +34,6 @@
             opacity: 0 !important;
             transform: scale(0.8) !important;
             pointer-events: none !important;
-        }
-
-        .slide-menu {
-            position: fixed;
-            top: 0;
-            left: -300px;
-            width: 300px;
-            height: 100vh;
-            background: black;
-            transition: left 0.3s ease;
-            z-index: 1000;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-            overflow-y: auto;
-        }
-
-        .slide-menu.open {
-            left: 0;
-        }
-
-        .menu-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .menu-overlay.open {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .menu-header {
-            padding: 30px 20px 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .menu-logo {
-            width: 60px;
-            height: 60px;
-            background: white;
-            border-radius: 50%;
-            margin: 0 auto 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: black;
-            font-weight: bold;
-        }
-
-        .menu-title {
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            margin: 0;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
-
-        .menu-subtitle {
-            color: rgba(255,255,255,0.8);
-            font-size: 8px !important;
-            margin: 5px 0 0;
-        }
-
-        .menu-nav {
-            padding: 20px 0;
-        }
-
-        .menu-item {
-            display: block;
-            padding: 15px 25px;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-            display: flex;
-            align-items: center;
-        }
-
-        .menu-item:hover {
-            background: rgba(255,255,255,0.1);
-            border-left-color: white;
-            padding-left: 30px;
-        }
-
-        .menu-item.active {
-            background: rgba(255,255,255,0.2);
-            border-left-color: #ffd700;
-        }
-
-        .menu-icon {
-            width: 20px;
-            height: 20px;
-            margin-right: 15px;
-            background: currentColor;
-            mask-size: contain;
-            mask-repeat: no-repeat;
-            mask-position: center;
-        }
-
-        .menu-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            text-align: center;
-            background: rgba(0,0,0,0.2);
-            color: rgba(255,255,255,0.7);
-            font-size: 12px;
         }
 
         /* CSS untuk halaman monitoring belanjaan */
@@ -282,13 +162,19 @@
             transform: scale(1.05);
         }
 
+        /* Debug info */
+        .debug-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #856404;
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
-            .slide-menu {
-                width: 280px;
-                left: -280px;
-            }
-            
             .menu-toggle {
                 top: 10px !important;
                 left: 10px !important;
@@ -320,7 +206,6 @@
                 padding: 8px;
                 font-size: 14px;
             }
-            
         }
 
         @media (max-width: 480px) {
@@ -352,6 +237,10 @@
 </head>
 <body>
     <div class="container">
+        <div class="debug-info" id="debugInfo">
+            Data loaded: 0 items | Counter: 1 | Storage: Unknown
+        </div>
+
         <div class="input-section">
             <div class="datetime-display" id="datetimeDisplay">
                 Tanggal: - | Jam: -
@@ -411,72 +300,238 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <div id="footer-container"></div>
-
     <script>
         let dataTransaksi = [];
         let counter = 1;
+        let storageMethod = 'unknown';
 
-        // Auto Save Cache Functions
-        function saveToCache() {
+        // Multiple storage methods with fallback
+        const Storage = {
+            // Method 1: Try localStorage (primary)
+            saveToLocalStorage: function(data) {
+                try {
+                    localStorage.setItem('belanja_data', JSON.stringify(data));
+                    return true;
+                } catch (e) {
+                    console.log('localStorage failed:', e.message);
+                    return false;
+                }
+            },
+
+            loadFromLocalStorage: function() {
+                try {
+                    const data = localStorage.getItem('belanja_data');
+                    return data ? JSON.parse(data) : null;
+                } catch (e) {
+                    console.log('localStorage read failed:', e.message);
+                    return null;
+                }
+            },
+
+            clearLocalStorage: function() {
+                try {
+                    localStorage.removeItem('belanja_data');
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            },
+
+            // Method 2: Cookie fallback (with compression)
+            saveToCookie: function(data) {
+                try {
+                    const dataString = JSON.stringify(data);
+                    // Check cookie size limit (4KB)
+                    if (dataString.length > 3000) {
+                        console.log('Data too large for cookie storage');
+                        return false;
+                    }
+                    document.cookie = `belanja_data=${encodeURIComponent(dataString)}; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/; SameSite=Lax`;
+                    return true;
+                } catch (e) {
+                    console.log('Cookie save failed:', e.message);
+                    return false;
+                }
+            },
+
+            loadFromCookie: function() {
+                try {
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [key, value] = cookie.trim().split('=');
+                        if (key === 'belanja_data' && value) {
+                            return JSON.parse(decodeURIComponent(value));
+                        }
+                    }
+                    return null;
+                } catch (e) {
+                    console.log('Cookie read failed:', e.message);
+                    return null;
+                }
+            },
+
+            clearCookie: function() {
+                try {
+                    document.cookie = 'belanja_data=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            },
+
+            // Method 3: In-memory with session persistence
+            saveToMemory: function(data) {
+                try {
+                    window.belanjaData = data;
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            },
+
+            loadFromMemory: function() {
+                try {
+                    return window.belanjaData || null;
+                } catch (e) {
+                    return null;
+                }
+            },
+
+            clearMemory: function() {
+                try {
+                    delete window.belanjaData;
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+        };
+
+        // Unified storage interface
+        function saveData() {
             const data = {
                 dataTransaksi: dataTransaksi,
-                counter: counter
+                counter: counter,
+                timestamp: Date.now()
             };
-            try {
-                const dataString = JSON.stringify(data);
-                // Menggunakan cookie sebagai alternatif localStorage
-                document.cookie = `belanja_data=${dataString}; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/`;
-                console.log('Data berhasil disimpan ke cache');
-            } catch (error) {
-                console.log('Error saving to cache:', error);
+
+            let saved = false;
+            
+            // Try localStorage first
+            if (!saved && Storage.saveToLocalStorage(data)) {
+                storageMethod = 'localStorage';
+                saved = true;
             }
+            
+            // Try cookie as fallback
+            if (!saved && Storage.saveToCookie(data)) {
+                storageMethod = 'cookie';
+                saved = true;
+            }
+            
+            // Always save to memory as final fallback
+            if (Storage.saveToMemory(data)) {
+                if (!saved) {
+                    storageMethod = 'memory';
+                }
+                saved = true;
+            }
+
+            updateDebugInfo();
+            
+            if (saved) {
+                console.log(`Data saved using ${storageMethod}`);
+            } else {
+                console.log('Failed to save data');
+            }
+            
+            return saved;
         }
 
-        function loadFromCache() {
-            try {
-                // Membaca dari cookie
-                const cookies = document.cookie.split(';');
-                let savedData = null;
+        function loadData() {
+            let data = null;
+            
+            // Try localStorage first
+            data = Storage.loadFromLocalStorage();
+            if (data) {
+                storageMethod = 'localStorage';
+            }
+            
+            // Try cookie if localStorage failed
+            if (!data) {
+                data = Storage.loadFromCookie();
+                if (data) {
+                    storageMethod = 'cookie';
+                }
+            }
+            
+            // Try memory as final fallback
+            if (!data) {
+                data = Storage.loadFromMemory();
+                if (data) {
+                    storageMethod = 'memory';
+                }
+            }
+
+            if (data && data.dataTransaksi && Array.isArray(data.dataTransaksi)) {
+                dataTransaksi = data.dataTransaksi;
+                counter = data.counter || 1;
                 
-                for (let cookie of cookies) {
-                    const [key, value] = cookie.trim().split('=');
-                    if (key === 'belanja_data' && value) {
-                        savedData = JSON.parse(decodeURIComponent(value));
-                        break;
+                // Validate data integrity
+                if (dataTransaksi.length > 0) {
+                    // Fix counter if needed
+                    const maxNo = Math.max(...dataTransaksi.map(item => item.no || 0));
+                    if (counter <= maxNo) {
+                        counter = maxNo + 1;
                     }
                 }
-
-                if (savedData) {
-                    dataTransaksi = savedData.dataTransaksi || [];
-                    counter = savedData.counter || 1;
-                    tampilkanData();
-                    console.log('Data berhasil dimuat dari cache');
-                    return true;
-                }
-            } catch (error) {
-                console.log('Error loading from cache:', error);
+                
+                tampilkanData();
+                updateDebugInfo();
+                console.log(`Data loaded using ${storageMethod}: ${dataTransaksi.length} items`);
+                return true;
             }
+            
+            storageMethod = 'none';
+            updateDebugInfo();
+            console.log('No data found in any storage method');
             return false;
         }
 
-        function clearCache() {
-            // Hapus cookie
-            document.cookie = 'belanja_data=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-            console.log('Cache berhasil dihapus');
+        function clearData() {
+            Storage.clearLocalStorage();
+            Storage.clearCookie();
+            Storage.clearMemory();
+            
+            dataTransaksi = [];
+            counter = 1;
+            storageMethod = 'none';
+            updateDebugInfo();
+            console.log('All data cleared from all storage methods');
+        }
+
+        function updateDebugInfo() {
+            const debugElement = document.getElementById('debugInfo');
+            if (debugElement) {
+                const dataSize = JSON.stringify({dataTransaksi, counter}).length;
+                debugElement.textContent = `Data loaded: ${dataTransaksi.length} items | Counter: ${counter} | Storage: ${storageMethod} | Size: ${dataSize} bytes`;
+            }
         }
 
         // Set tanggal dan jam otomatis saat halaman dimuat
         window.onload = function() {
+            console.log('Page loaded, initializing...');
             setCurrentDateTime();
-            // Load data dari cache saat halaman dimuat
-            const loaded = loadFromCache();
+            
+            // Load data from storage
+            const loaded = loadData();
             if (loaded) {
-                console.log('Data existing dimuat dari cache');
+                console.log(`Successfully loaded ${dataTransaksi.length} existing records`);
             } else {
-                console.log('Tidak ada data tersimpan, mulai fresh');
+                console.log('Starting with fresh data');
             }
+            
+            updateDebugInfo();
         }
 
         function setCurrentDateTime() {
@@ -488,6 +543,8 @@
         }
 
         function tambahData(jenis) {
+            console.log(`Attempting to add ${jenis} transaction...`);
+            
             const { tanggal, jam } = setCurrentDateTime();
             const totalBelanja = parseFloat(unformatRupiah(document.getElementById('totalBelanja').value)) || 0;
 
@@ -500,30 +557,56 @@
             const nilaiTransaksi = jenis === 'Cash Out' ? -totalBelanja : totalBelanja;
 
             const transaksi = {
-                no: counter++,
+                no: counter,
                 tanggal: tanggal,
                 jam: jam,
                 totalBelanja: nilaiTransaksi,
-                isCashOut: jenis === 'Cash Out'
+                isCashOut: jenis === 'Cash Out',
+                id: Date.now() + Math.random() // Unique ID
             };
 
             dataTransaksi.push(transaksi);
+            counter++;
+            
+            console.log(`Transaction added. New count: ${dataTransaksi.length}`);
+            
             tampilkanData();
             
-            // Auto save setelah menambah data
-            saveToCache();
+            // Save data
+            const saved = saveData();
+            if (!saved) {
+                console.warn('Failed to save data after adding transaction');
+                alert('Peringatan: Data mungkin tidak tersimpan dengan benar');
+            }
 
             // Reset input
             document.getElementById('totalBelanja').value = '';
+            
+            updateDebugInfo();
         }
 
         function hapusData(index) {
             if (confirm('Yakin ingin menghapus data ini?')) {
-                dataTransaksi.splice(index, 1);
-                tampilkanData();
+                console.log(`Deleting transaction at index ${index}`);
                 
-                // Auto save setelah menghapus data
-                saveToCache();
+                if (index >= 0 && index < dataTransaksi.length) {
+                    dataTransaksi.splice(index, 1);
+                    console.log(`Transaction deleted. New count: ${dataTransaksi.length}`);
+                    
+                    tampilkanData();
+                    
+                    // Save data
+                    const saved = saveData();
+                    if (!saved) {
+                        console.warn('Failed to save data after deleting transaction');
+                        alert('Peringatan: Data mungkin tidak tersimpan dengan benar');
+                    }
+                    
+                    updateDebugInfo();
+                } else {
+                    console.error(`Invalid index for deletion: ${index}`);
+                    alert('Error: Data tidak valid untuk dihapus');
+                }
             }
         }
 
@@ -531,9 +614,11 @@
             const tbody = document.querySelector('#tabelData tbody');
             tbody.innerHTML = '';
 
+            console.log(`Displaying ${dataTransaksi.length} transactions`);
+
             dataTransaksi.forEach((transaksi, index) => {
                 const row = tbody.insertRow();
-                const cellClass = transaksi.totalBelanja < 0 ? 'style="background-color: white; color: black;"' : 'style="background-color: white; color: black;"';
+                const cellClass = 'style="background-color: white; color: black;"';
                 
                 row.innerHTML = `
                     <td ${cellClass}>${transaksi.no}</td>
@@ -609,14 +694,28 @@
 
         function resetData() {
             if (confirm('Yakin ingin menghapus semua data?')) {
-                dataTransaksi = [];
-                counter = 1;
+                console.log('Resetting all data...');
+                clearData();
                 tampilkanData();
-                
-                // Hapus cache juga saat reset
-                clearCache();
+                updateDebugInfo();
+                console.log('All data reset successfully');
             }
         }
+
+        // Prevent data loss on page unload
+        window.addEventListener('beforeunload', function(e) {
+            if (dataTransaksi.length > 0) {
+                saveData();
+            }
+        });
+
+        // Auto-save every 30 seconds
+        setInterval(function() {
+            if (dataTransaksi.length > 0) {
+                saveData();
+                console.log('Auto-save completed');
+            }
+        }, 30000);
     </script>
 </body>
 </html>
