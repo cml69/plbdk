@@ -417,172 +417,67 @@
     <script>
         let dataTransaksi = [];
         let counter = 1;
-        
-        // Konstanta untuk storage
-        const STORAGE_KEY = 'belanjaMonitoringData';
-        
-        // Fungsi untuk mengubah array menjadi string untuk penyimpanan
-        function encodeData(data) {
-            try {
-                return btoa(JSON.stringify(data));
-            } catch (e) {
-                return JSON.stringify(data);
-            }
-        }
-        
-        // Fungsi untuk mengubah string kembali menjadi array
-        function decodeData(encodedData) {
-            try {
-                return JSON.parse(atob(encodedData));
-            } catch (e) {
-                try {
-                    return JSON.parse(encodedData);
-                } catch (e2) {
-                    return null;
-                }
-            }
-        }
 
-        // Multi-layer storage system untuk memastikan data tidak hilang
-        function saveData() {
-            const dataToSave = {
+        // Auto Save Cache Functions
+        function saveToCache() {
+            const data = {
                 dataTransaksi: dataTransaksi,
-                counter: counter,
-                timestamp: Date.now()
+                counter: counter
             };
-            
-            const encodedData = encodeData(dataToSave);
-            
-            // Method 1: Cookie dengan expire yang sangat lama
             try {
-                const expireDate = new Date();
-                expireDate.setFullYear(expireDate.getFullYear() + 10); // 10 tahun
-                document.cookie = `${STORAGE_KEY}=${encodedData}; expires=${expireDate.toUTCString()}; path=/; SameSite=Lax`;
-            } catch (e) {
-                console.log('Cookie storage error:', e);
+                const dataString = JSON.stringify(data);
+                // Menggunakan cookie sebagai alternatif localStorage
+                document.cookie = `belanja_data=${dataString}; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/`;
+                console.log('Data berhasil disimpan ke cache');
+            } catch (error) {
+                console.log('Error saving to cache:', error);
             }
-            
-            // Method 2: Session storage sebagai backup
-            try {
-                sessionStorage.setItem(STORAGE_KEY, encodedData);
-            } catch (e) {
-                console.log('SessionStorage error:', e);
-            }
-            
-            // Method 3: Local storage jika memungkinkan
-            try {
-                localStorage.setItem(STORAGE_KEY, encodedData);
-            } catch (e) {
-                console.log('LocalStorage error:', e);
-            }
-            
-            // Method 4: URL hash sebagai backup tambahan untuk data penting
-            try {
-                if (dataTransaksi.length > 0) {
-                    const compactData = {
-                        total: dataTransaksi.reduce((sum, item) => sum + item.totalBelanja, 0),
-                        count: dataTransaksi.length,
-                        lastUpdate: Date.now()
-                    };
-                    window.location.hash = `data=${btoa(JSON.stringify(compactData))}`;
-                }
-            } catch (e) {
-                console.log('Hash storage error:', e);
-            }
-            
-            console.log(`Data tersimpan: ${dataTransaksi.length} transaksi`);
         }
 
-        function loadData() {
-            let loadedData = null;
-            
-            // Coba load dari berbagai sumber
-            const sources = [
-                // Local Storage
-                () => localStorage.getItem(STORAGE_KEY),
-                // Session Storage  
-                () => sessionStorage.getItem(STORAGE_KEY),
-                // Cookie
-                () => {
-                    const cookies = document.cookie.split(';');
-                    for (let cookie of cookies) {
-                        const [key, value] = cookie.trim().split('=');
-                        if (key === STORAGE_KEY) {
-                            return decodeURIComponent(value);
-                        }
-                    }
-                    return null;
-                }
-            ];
-            
-            for (const source of sources) {
-                try {
-                    const rawData = source();
-                    if (rawData) {
-                        const decodedData = decodeData(rawData);
-                        if (decodedData && decodedData.dataTransaksi) {
-                            loadedData = decodedData;
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    console.log('Error loading from source:', e);
-                    continue;
-                }
-            }
-            
-            if (loadedData) {
-                dataTransaksi = loadedData.dataTransaksi || [];
-                counter = loadedData.counter || (dataTransaksi.length + 1);
+        function loadFromCache() {
+            try {
+                // Membaca dari cookie
+                const cookies = document.cookie.split(';');
+                let savedData = null;
                 
-                // Perbaiki counter jika tidak sesuai
-                if (counter <= dataTransaksi.length) {
-                    counter = Math.max(...dataTransaksi.map(item => item.no || 0)) + 1;
+                for (let cookie of cookies) {
+                    const [key, value] = cookie.trim().split('=');
+                    if (key === 'belanja_data' && value) {
+                        savedData = JSON.parse(decodeURIComponent(value));
+                        break;
+                    }
                 }
-                
-                tampilkanData();
-                console.log(`Data dimuat: ${dataTransaksi.length} transaksi`);
-                return true;
+
+                if (savedData) {
+                    dataTransaksi = savedData.dataTransaksi || [];
+                    counter = savedData.counter || 1;
+                    tampilkanData();
+                    console.log('Data berhasil dimuat dari cache');
+                    return true;
+                }
+            } catch (error) {
+                console.log('Error loading from cache:', error);
             }
-            
-            console.log('Tidak ada data tersimpan, memulai fresh');
             return false;
         }
 
-        function clearAllData() {
-            // Hapus dari semua storage
-            try {
-                localStorage.removeItem(STORAGE_KEY);
-                sessionStorage.removeItem(STORAGE_KEY);
-                document.cookie = `${STORAGE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-                window.location.hash = '';
-            } catch (e) {
-                console.log('Error clearing data:', e);
-            }
+        function clearCache() {
+            // Hapus cookie
+            document.cookie = 'belanja_data=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            console.log('Cache berhasil dihapus');
         }
 
         // Set tanggal dan jam otomatis saat halaman dimuat
-        window.addEventListener('load', function() {
+        window.onload = function() {
             setCurrentDateTime();
-            loadData();
-        });
-        
-        // Auto-save setiap 30 detik
-        setInterval(function() {
-            if (dataTransaksi.length > 0) {
-                saveData();
+            // Load data dari cache saat halaman dimuat
+            const loaded = loadFromCache();
+            if (loaded) {
+                console.log('Data existing dimuat dari cache');
+            } else {
+                console.log('Tidak ada data tersimpan, mulai fresh');
             }
-        }, 30000);
-        
-        // Save saat user akan meninggalkan halaman
-        window.addEventListener('beforeunload', function() {
-            saveData();
-        });
-        
-        // Save saat tab kehilangan focus
-        window.addEventListener('blur', function() {
-            saveData();
-        });
+        }
 
         function setCurrentDateTime() {
             const now = new Date();
@@ -609,13 +504,14 @@
                 tanggal: tanggal,
                 jam: jam,
                 totalBelanja: nilaiTransaksi,
-                isCashOut: jenis === 'Cash Out',
-                timestamp: Date.now()
+                isCashOut: jenis === 'Cash Out'
             };
 
             dataTransaksi.push(transaksi);
             tampilkanData();
-            saveData(); // Auto save setelah menambah data
+            
+            // Auto save setelah menambah data
+            saveToCache();
 
             // Reset input
             document.getElementById('totalBelanja').value = '';
@@ -625,7 +521,9 @@
             if (confirm('Yakin ingin menghapus data ini?')) {
                 dataTransaksi.splice(index, 1);
                 tampilkanData();
-                saveData(); // Auto save setelah menghapus data
+                
+                // Auto save setelah menghapus data
+                saveToCache();
             }
         }
 
@@ -710,11 +608,13 @@
         }
 
         function resetData() {
-            if (confirm('Yakin ingin menghapus semua data? Data yang sudah dihapus tidak bisa dikembalikan!')) {
+            if (confirm('Yakin ingin menghapus semua data?')) {
                 dataTransaksi = [];
                 counter = 1;
                 tampilkanData();
-                clearAllData(); // Hapus dari semua storage
+                
+                // Hapus cache juga saat reset
+                clearCache();
             }
         }
     </script>
