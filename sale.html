@@ -2,22 +2,12 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoring Total Belanjaan</title>
     <link rel="stylesheet" href="styles.css">
     <script src="menu.js"></script>
     <script src="footer.js"></script>
     <style>
-        /* CSS untuk mencegah double tap zoom */
-        * {
-            touch-action: manipulation;
-        }
-        
-        html, body {
-            touch-action: manipulation;
-            -webkit-text-size-adjust: 100%;
-        }
-        
         /* Menu Styles */
         .menu-toggle {
             position: fixed !important;
@@ -350,16 +340,6 @@
         let dataTransaksi = [];
         let counter = 1;
         let storageMethod = 'unknown';
-
-        // Prevent double tap zoom with JavaScript
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function (event) {
-            var now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
 
         // Multiple storage methods with fallback
         const Storage = {
