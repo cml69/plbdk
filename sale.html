@@ -39,6 +39,100 @@
             pointer-events: none !important;
         }
 
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .modal-text {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .modal-btn-yes {
+            background: #007AFF;
+            color: white;
+        }
+
+        .modal-btn-yes:hover {
+            background: #0056CC;
+            transform: translateY(-2px);
+        }
+
+        .modal-btn-no {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+
+        .modal-btn-no:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(-50px) scale(0.9); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
         /* CSS untuk halaman monitoring belanjaan */
         body {
             font-family: Arial, sans-serif;
@@ -97,7 +191,7 @@
         }
         
         /* Button styling - kecuali menu-toggle */
-        button:not(.menu-toggle) {
+        button:not(.menu-toggle):not(.modal-btn) {
             background: #28a745;
             color: white;
             padding: 12px 25px;
@@ -109,7 +203,7 @@
             white-space: nowrap;
         }
         
-        button:not(.menu-toggle):hover {
+        button:not(.menu-toggle):not(.modal-btn):hover {
             background: #218838;
         }
         
@@ -190,6 +284,20 @@
             color: #856404;
         }
 
+        /* Keypad container yang bisa disembunyikan */
+        .keypad-container {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: -10px;
+            border: 1px solid #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .keypad-container.hidden {
+            display: none;
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .menu-toggle {
@@ -214,7 +322,7 @@
                 align-items: flex-start;
             }
             
-            button:not(.menu-toggle) {
+            button:not(.menu-toggle):not(.modal-btn) {
                 width: 100%;
                 margin-left: 0;
                 margin-bottom: 0px;
@@ -228,6 +336,20 @@
             th, td {
                 padding: 8px;
                 font-size: 14px;
+            }
+
+            .modal-content {
+                max-width: 350px;
+                padding: 25px;
+            }
+
+            .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .modal-btn {
+                width: 100%;
             }
         }
 
@@ -255,13 +377,44 @@
                 font-size: 14px;
                 padding: 8px;
             }
+
+            .modal-content {
+                max-width: 300px;
+                padding: 20px;
+            }
+
+            .modal-title {
+                font-size: 20px;
+            }
+
+            .modal-text {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Modal untuk pilihan iPhone -->
+    <div id="iphoneModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-title">📱 Pilihan Keyboard</div>
+            <div class="modal-text">
+                <strong>Apakah Anda pengguna iPhone?</strong><br><br>
+                <small style="color: #888;">
+                    • Ya: Keypad web disembunyikan, menggunakan keyboard iPhone<br>
+                    • Tidak: Menggunakan keypad web seperti biasa
+                </small>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-yes" onclick="pilihKeyboard(true)">Ya, iPhone</button>
+                <button class="modal-btn modal-btn-no" onclick="pilihKeyboard(false)">Tidak, Bukan iPhone</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="debug-info" id="debugInfo">
-            Data loaded: 0 items | Counter: 1 | Storage: Unknown
+            Data loaded: 0 items | Counter: 1 | Storage: Unknown | Keypad: Unknown
         </div>
 
         <div class="input-section">
@@ -277,12 +430,12 @@
             
             <div class="input-row">
                 <div class="input-group">
-                <input type="text" id="totalBelanja" placeholder="0" oninput="formatInputValue(this)">
+                    <input type="text" id="totalBelanja" placeholder="0" oninput="formatInputValue(this)" inputmode="numeric">
                 </div>
             </div>
             
             <!-- Keypad Angka -->
-            <div class="keypad-container" style="background: white; padding: 15px; border-radius: 8px; margin-top: -10px; border: 1px solid #ddd;">
+            <div class="keypad-container" id="keypadContainer">
                 <div class="keypad-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%;">
                     <button class="keypad-btn" onclick="inputAngka('1')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">1</button>
                     <button class="keypad-btn" onclick="inputAngka('2')" style="padding: 15px; font-size: 18px; font-weight: bold; background: #f8f9fa; color: black; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">2</button>
@@ -340,10 +493,152 @@
         let dataTransaksi = [];
         let counter = 1;
         let storageMethod = 'unknown';
+        let useWebKeypad = true; // Default menggunakan keypad web
+        let keypadPreferenceSet = false;
+
+        // Fungsi untuk menampilkan modal pilihan
+        function showIPhoneModal() {
+            const modal = document.getElementById('iphoneModal');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Fungsi untuk menyembunyikan modal
+        function hideIPhoneModal() {
+            const modal = document.getElementById('iphoneModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Fungsi untuk memilih jenis keyboard
+        function pilihKeyboard(isIPhoneUser) {
+            console.log('User is iPhone user:', isIPhoneUser);
+            
+            useWebKeypad = !isIPhoneUser; // Jika iPhone user, tidak pakai keypad web
+            keypadPreferenceSet = true;
+            
+            // Simpan pilihan ke storage
+            saveKeypadPreference(isIPhoneUser);
+            
+            // Update tampilan keypad
+            updateKeypadDisplay();
+            
+            // Update input type berdasarkan pilihan
+            const inputElement = document.getElementById('totalBelanja');
+            if (isIPhoneUser) {
+                // iPhone user - gunakan keyboard bawaan
+                inputElement.setAttribute('inputmode', 'numeric');
+                inputElement.setAttribute('pattern', '[0-9]*');
+                inputElement.style.fontSize = '16px'; // Prevent zoom on iOS
+            } else {
+                // Non-iPhone - tetap gunakan keypad web
+                inputElement.setAttribute('inputmode', 'none'); // Disable keyboard
+            }
+            
+            hideIPhoneModal();
+            updateDebugInfo();
+        }
+
+        // Simpan preferensi keypad ke storage
+        function saveKeypadPreference(isIPhoneUser) {
+            const preference = {
+                isIPhoneUser: isIPhoneUser,
+                useWebKeypad: !isIPhoneUser,
+                timestamp: Date.now()
+            };
+
+            try {
+                localStorage.setItem('keypad_preference', JSON.stringify(preference));
+            } catch (e) {
+                // Fallback ke cookie
+                try {
+                    document.cookie = `keypad_preference=${encodeURIComponent(JSON.stringify(preference))}; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/; SameSite=Lax`;
+                } catch (err) {
+                    console.log('Failed to save keypad preference');
+                }
+            }
+        }
+
+        // Load preferensi keypad dari storage
+        function loadKeypadPreference() {
+            let preference = null;
+            
+            // Coba dari localStorage
+            try {
+                const stored = localStorage.getItem('keypad_preference');
+                if (stored) {
+                    preference = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.log('localStorage read failed for keypad preference');
+            }
+            
+            // Coba dari cookie jika localStorage gagal
+            if (!preference) {
+                try {
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [key, value] = cookie.trim().split('=');
+                        if (key === 'keypad_preference' && value) {
+                            preference = JSON.parse(decodeURIComponent(value));
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.log('Cookie read failed for keypad preference');
+                }
+            }
+            
+            if (preference && typeof preference.useWebKeypad === 'boolean') {
+                useWebKeypad = preference.useWebKeypad;
+                keypadPreferenceSet = true;
+                
+                // Update input element
+                const inputElement = document.getElementById('totalBelanja');
+                if (!useWebKeypad) {
+                    // iPhone user
+                    inputElement.setAttribute('inputmode', 'numeric');
+                    inputElement.setAttribute('pattern', '[0-9]*');
+                    inputElement.style.fontSize = '16px';
+                } else {
+                    // Non-iPhone user
+                    inputElement.setAttribute('inputmode', 'none');
+                }
+                
+                updateKeypadDisplay();
+                return true;
+            }
+            
+            return false;
+        }
+
+        // Update tampilan keypad
+        function updateKeypadDisplay() {
+            const keypadContainer = document.getElementById('keypadContainer');
+            
+            if (useWebKeypad) {
+                keypadContainer.classList.remove('hidden');
+            } else {
+                keypadContainer.classList.add('hidden');
+            }
+        }
+
+        // Clear keypad preference (dipanggil saat reset data)
+        function clearKeypadPreference() {
+            try {
+                localStorage.removeItem('keypad_preference');
+            } catch (e) {}
+            
+            try {
+                document.cookie = 'keypad_preference=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            } catch (e) {}
+            
+            useWebKeypad = true;
+            keypadPreferenceSet = false;
+        }
 
         // Multiple storage methods with fallback
         const Storage = {
-            // Method 1: Try localStorage (primary)
             saveToLocalStorage: function(data) {
                 try {
                     localStorage.setItem('belanja_data', JSON.stringify(data));
@@ -373,11 +668,9 @@
                 }
             },
 
-            // Method 2: Cookie fallback (with compression)
             saveToCookie: function(data) {
                 try {
                     const dataString = JSON.stringify(data);
-                    // Check cookie size limit (4KB)
                     if (dataString.length > 3000) {
                         console.log('Data too large for cookie storage');
                         return false;
@@ -415,7 +708,6 @@
                 }
             },
 
-            // Method 3: In-memory with session persistence
             saveToMemory: function(data) {
                 try {
                     window.belanjaData = data;
@@ -453,19 +745,16 @@
 
             let saved = false;
             
-            // Try localStorage first
             if (!saved && Storage.saveToLocalStorage(data)) {
                 storageMethod = 'localStorage';
                 saved = true;
             }
             
-            // Try cookie as fallback
             if (!saved && Storage.saveToCookie(data)) {
                 storageMethod = 'cookie';
                 saved = true;
             }
             
-            // Always save to memory as final fallback
             if (Storage.saveToMemory(data)) {
                 if (!saved) {
                     storageMethod = 'memory';
@@ -487,13 +776,11 @@
         function loadData() {
             let data = null;
             
-            // Try localStorage first
             data = Storage.loadFromLocalStorage();
             if (data) {
                 storageMethod = 'localStorage';
             }
             
-            // Try cookie if localStorage failed
             if (!data) {
                 data = Storage.loadFromCookie();
                 if (data) {
@@ -501,7 +788,6 @@
                 }
             }
             
-            // Try memory as final fallback
             if (!data) {
                 data = Storage.loadFromMemory();
                 if (data) {
@@ -513,15 +799,12 @@
                 dataTransaksi = data.dataTransaksi;
                 counter = data.counter || 1;
                 
-                // Validate data integrity
                 if (dataTransaksi.length > 0) {
-                    // Fix counter if needed
                     const maxNo = Math.max(...dataTransaksi.map(item => item.no || 0));
                     if (counter <= maxNo) {
                         counter = maxNo + 1;
                     }
                     
-                    // Update text terakhir berdasarkan transaksi terakhir
                     const transaksiTerakhir = dataTransaksi[dataTransaksi.length - 1];
                     if (transaksiTerakhir) {
                         const jenis = transaksiTerakhir.isCashOut ? 'Cash Out' : 'Tunai';
@@ -546,6 +829,7 @@
             Storage.clearLocalStorage();
             Storage.clearCookie();
             Storage.clearMemory();
+            clearKeypadPreference(); // Clear keypad preference juga
             
             dataTransaksi = [];
             counter = 1;
@@ -558,7 +842,8 @@
             const debugElement = document.getElementById('debugInfo');
             if (debugElement) {
                 const dataSize = JSON.stringify({dataTransaksi, counter}).length;
-                debugElement.textContent = `Data loaded: ${dataTransaksi.length} items | Counter: ${counter} | Storage: ${storageMethod} | Size: ${dataSize} bytes`;
+                const keypadStatus = keypadPreferenceSet ? (useWebKeypad ? 'Web' : 'iPhone') : 'Not Set';
+                debugElement.textContent = `Data loaded: ${dataTransaksi.length} items | Counter: ${counter} | Storage: ${storageMethod} | Keypad: ${keypadStatus}`;
             }
         }
 
@@ -573,6 +858,13 @@
                 console.log(`Successfully loaded ${dataTransaksi.length} existing records`);
             } else {
                 console.log('Starting with fresh data');
+            }
+            
+            // Load keypad preference
+            const keypadLoaded = loadKeypadPreference();
+            if (!keypadLoaded) {
+                // Jika belum ada preferensi, tampilkan modal
+                setTimeout(showIPhoneModal, 500); // Delay sedikit agar halaman sempat load
             }
             
             updateDebugInfo();
@@ -597,7 +889,6 @@
                 return;
             }
 
-            // Untuk cash out, jadikan negatif
             const nilaiTransaksi = jenis === 'Cash Out' ? -totalBelanja : totalBelanja;
 
             const transaksi = {
@@ -606,7 +897,7 @@
                 jam: jam,
                 totalBelanja: nilaiTransaksi,
                 isCashOut: jenis === 'Cash Out',
-                id: Date.now() + Math.random() // Unique ID
+                id: Date.now() + Math.random()
             };
 
             dataTransaksi.push(transaksi);
@@ -614,21 +905,16 @@
             
             console.log(`Transaction added. New count: ${dataTransaksi.length}`);
             
-            // Update text terakhir berdasarkan jenis
             updateTextTerakhir(jenis, totalBelanja);
-            
             tampilkanData();
             
-            // Save data
             const saved = saveData();
             if (!saved) {
                 console.warn('Failed to save data after adding transaction');
                 alert('Peringatan: Data mungkin tidak tersimpan dengan benar');
             }
 
-            // Reset input
             document.getElementById('totalBelanja').value = '';
-            
             updateDebugInfo();
         }
 
@@ -655,7 +941,6 @@
                     
                     tampilkanData();
                     
-                    // Save data
                     const saved = saveData();
                     if (!saved) {
                         console.warn('Failed to save data after deleting transaction');
@@ -679,7 +964,6 @@
 
             console.log(`Displaying ${dataTransaksi.length} transactions`);
 
-            // Tampilkan total di tabel terpisah di atas (hanya jika ada data)
             if (dataTransaksi.length > 0) {
                 const totalRow = totalTbody.insertRow();
                 totalRow.className = 'total-row';
@@ -690,7 +974,6 @@
                 `;
             }
 
-            // Tampilkan data dalam urutan terbalik (data terbaru di atas)
             const dataReversed = [...dataTransaksi].reverse();
             dataReversed.forEach((transaksi, reversedIndex) => {
                 const originalIndex = dataTransaksi.length - 1 - reversedIndex;
@@ -752,17 +1035,16 @@
             }
         }
 
-        function clearInput() {
-            const input = document.getElementById('totalBelanja');
-            input.value = '';
-        }
-
         function resetData() {
-            if (confirm('Yakin ingin menghapus semua data?')) {
+            if (confirm('Yakin ingin menghapus semua data? Ini juga akan reset pilihan keyboard Anda.')) {
                 console.log('Resetting all data...');
                 clearData();
                 tampilkanData();
                 updateDebugInfo();
+                
+                // Tampilkan modal lagi setelah reset
+                setTimeout(showIPhoneModal, 500);
+                
                 console.log('All data reset successfully');
             }
         }
